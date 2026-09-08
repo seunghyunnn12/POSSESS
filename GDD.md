@@ -1,4 +1,6 @@
-# 빙의 (가칭) — 게임 디자인 문서 v0.1
+# POSSESS — 게임 디자인 문서 v0.1
+
+> 제목 확정: **POSSESS** (2026-09-08). 스토어 표기는 검색 구분을 위해 부제 병기 — `POSSESS: The Borrowed Flesh`. Steam의 Possession/Possessed/Possessions와의 혼동은 부제와 키아트로 해결.
 
 > 한 줄: 당신은 유령이다. 적을 약화시켜 몸을 빼앗고, 썩기 전에 갈아타며, 보스까지 뚫는 3D 로그라이크 FPS.
 
