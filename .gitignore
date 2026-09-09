@@ -1,3 +1,4 @@
 .godot/
 *.tmp
 qa-output/
+docs/ui/possess-ui-mockups.html

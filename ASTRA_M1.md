@@ -1,39 +1,36 @@
-# Astra 과제서 — M1: 완성 뼈대 (아트를 나중에 덧씌울 수 있는 구조)
+# Astra 과제서 — M1: UI 시각 패스 (실제 게임처럼 보이게)
 
-기준 문서: `ROADMAP.md`, `GDD.md`. 이 과제서 밖의 새 시스템·콘텐츠 추가 금지. 기존 규칙·수치는 유지.
+기준: `docs/ui/UI_STYLE.md`(토큰·폰트·규칙) + `docs/ui/*.dc.html`(화면별 목업 — HTML 안의 px·색·폰트 값이 스펙). 이 과제 밖의 새 시스템·콘텐츠·규칙 추가 금지. 판정 계층(authority/action)은 손대지 않는다.
 
-## 1. 에셋 교체 규약 — 모델을 데이터로
-- `scripts/visuals.gd`(또는 동등한 단일 테이블)에 모든 시각 리소스를 모은다:
-  `kind → {model_path, scale, anim: {idle, walk, attack, hit, death}, sockets: {weapon_r, weapon_l, head}, fp_weapon_path}`
-- `arena.gd`·`presentation.gd`에서 하드코딩된 모델 경로·스케일·애니 클립 이름을 전부 이 테이블로 옮긴다.
-- 모델 로더는 **glTF 어떤 파일이든** 테이블만 바꾸면 되도록: 스케일은 캡슐 높이에 자동 맞춤(선택), 애니 클립이 없으면 폴백 클립 사용, 소켓이 없으면 본 이름으로 탐색.
-- 1인칭 무기·유령 손도 같은 테이블에서 씬 경로로 교체 가능하게 (지금의 박스 조립은 폴백으로 유지).
-- 규약을 `ASSET_CONVENTIONS.md`로 문서화: 단위(m), 정면 축, 기준 높이, 본 이름 규칙, 클립 이름 규칙, 소켓 이름. **이 문서대로 만든 GLB는 코드 수정 없이 들어가야 한다.**
+## 1. 폰트·테마
+- Google Fonts에서 Cinzel(600·800), Noto Serif KR(700·900), Noto Sans KR(400·500·700) TTF를 받아 `theme/fonts/`에 동봉(OFL 라이선스 텍스트 포함).
+- `theme/possess.tres` Theme 리소스 하나에 UI_STYLE.md의 색 토큰·타입 스케일·패널 스타일(StyleBoxFlat, 모서리 0, 1px 테두리)을 정의. 모든 UI는 이 Theme만 쓴다.
 
-## 2. 로컬라이즈 인프라
-- 화면에 보이는 모든 문자열을 `tr("KEY")`로 바꾸고 `locale/ko.csv`(키, 한국어)를 만든다. 영어 열은 비워 둔다 — Claude가 채운다.
-- 수치가 들어가는 문장은 `tr("KEY").format(...)` 형태로.
-- 설정에서 언어 전환 가능(재시작 불필요).
+## 2. 화면 4종을 Control 씬으로 재구축 (목업과 픽셀 단위로 맞출 것)
+- `scenes/ui/hud.tscn` ← `docs/ui/Main.dc.html`
+- `scenes/ui/upgrade_cards.tscn` ← `docs/ui/UpgradeCards.dc.html`
+- `scenes/ui/title.tscn` ← `docs/ui/Title.dc.html`
+- `scenes/ui/pause_info.tscn` ← `docs/ui/PauseInfo.dc.html`
+- 기존 `hud.gd`/`action_hud.gd`의 `draw_string` 즉시 모드는 제거. UI는 authority 신호만 관찰.
+- 아이콘·초상화·카드 일러스트·키아트 자리는 `TextureRect`(placeholder 색 사각형)로 비워 둔다 — 이미지 파일만 넣으면 되도록.
+- 조준점·빙의 확률 호·회피 쿨다운 호는 `_draw`가 아닌 Control(TextureProgressBar 또는 작은 커스텀 Control) 로.
 
-## 3. UI를 Control/Theme 기반으로 재구축
-- `hud.gd`/`action_hud.gd`의 `draw_string` 즉시 모드를 Control 씬(`scenes/ui/*.tscn`)으로 옮긴다: HUD, 증강 카드, 일시정지/정보창, 도감, 결과, 타이틀.
-- 하나의 `Theme` 리소스로 색·폰트·패널 스타일을 관리. 폰트는 임시로 시스템 폰트 유지하되 Theme에서 한 줄로 교체 가능하게.
-- 아이콘·초상화·카드 일러스트 자리는 `TextureRect`로 비워 둔다(placeholder 색 사각형). 나중에 이미지 파일만 넣으면 되도록.
-- 정보 중복 제거: 같은 안내가 화면에 두 번 뜨지 않는다(무기 팁 중복, 상시 "위장" 문구). 상시 노출 텍스트는 HUD 4곳(상태·수명·탄창·남은 적)으로 제한.
-- 판정 계층(`authority`/`action`)은 손대지 않는다. UI는 신호만 관찰.
+## 3. 정보 정리 (목업의 HUD 규칙)
+- 상시 노출 텍스트는 HUD 4곳(스테이지·남은 적·몸/수명·무기/탄창) + 하단 영혼 바만.
+- 같은 안내가 두 번 뜨지 않는다(무기 팁 중앙·하단 중복 제거). "위장 · 공격하면 풀립니다" 같은 상시 문구 제거.
+- 상태 변화 안내는 1.5초 토스트 1줄, 한 번에 하나(큐).
+- 수명 바 10칸 분절, 25% 이하 danger 색.
 
-## 4. 시스템 플래그
-- `scripts/config.gd`에 토글: `disguise`, `seer`, `individual_values`, `quests`, `relics`, `secrets`. 기본값은 현재와 동일(전부 ON).
-- OFF일 때 관련 UI·규칙·적 특성이 완전히 사라지고 나머지가 정상 동작. 검사로 보장.
-- 목적: 유저 플레이테스트에서 "코어만" 버전과 비교하기 위함.
-
-## 5. 유지
-- 검사 261개 통과 유지 + 새 검사(테이블 기반 로딩, 언어 전환, 플래그 OFF 동작).
-- 성능 회귀 없음(같은 장면 p99 비교).
-- 커밋은 작업 단위별로, `git push origin main`.
+## 4. 같이 처리 (UI 만드는 김에, 화면에 안 보이는 배선)
+- 화면 문자열 전부 `tr("KEY")` + `locale/ko.csv`(영어 열은 비워 둠 — 별도 담당).
+- 모델 경로·스케일·애니 클립 이름을 `scripts/visuals.gd` 테이블 하나로 이동(하드코딩 제거). 규약은 `ASSET_CONVENTIONS.md`에 문서화.
 
 ## 수용 기준
-1. `ASSET_CONVENTIONS.md`대로 만든 임의 GLB를 테이블에 한 줄 추가하면 코드 수정 없이 게임에 나타난다 — 실제로 KayKit `Mage.glb`를 새 몸 종류로 넣어 증명.
-2. 언어를 영어로 바꾸면 빈 문자열이 아닌 키가 표시된다(번역 전이므로) — 누락 키 0개.
-3. 모든 화면이 Control 씬이며 `draw_string` 직접 호출이 남아 있지 않다.
-4. 6개 플래그를 전부 OFF로 한 "코어만" 빌드가 연습→7구역→엔딩까지 봇 플레이스루로 완주된다.
+1. 목업 4장과 게임 스크린샷 4장을 나란히 놓았을 때 레이아웃·색·폰트·크기가 일치한다. `qa-output/v06-*.png`로 제출.
+2. `draw_string` 직접 호출이 남아 있지 않다.
+3. 기존 검사 261개 통과 + 언어 전환·테이블 로딩 검사 추가. 성능 회귀 없음(같은 장면 p99).
+4. 상시 텍스트가 HUD 4곳+영혼 바 외에 없다.
+5. 작업 단위별 커밋, `git push origin main`, 결과는 `QA_V06.md`.
+
+## 이후 예정 (지금 하지 말 것)
+M2 영구 해금·세이브·유령 3종·설정 메뉴 / M3 60fps·Windows 빌드·Steamworks / 아트 패스(AI 3D 모델·애니·환경·VFX·사운드) / M4 협동.

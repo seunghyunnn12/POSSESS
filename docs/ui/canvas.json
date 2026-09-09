@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 720, "title": "HUD · 전투" },
+    { "file": "UpgradeCards.dc.html", "x": 1400, "y": 0, "w": 1280, "h": 720, "title": "증강 선택" },
+    { "file": "Title.dc.html", "x": 0, "y": 880, "w": 1280, "h": 720, "title": "타이틀" },
+    { "file": "PauseInfo.dc.html", "x": 1400, "y": 880, "w": 1280, "h": 720, "title": "일시정지 · 정보" },
+    { "file": "HudAltBone.dc.html", "x": 0, "y": 1760, "w": 1280, "h": 720, "title": "대안 B · 뼈·황토 HUD" }
+  ],
+  "annotations": [
+    { "id": "guide-main", "x": 0, "y": -150, "w": 640, "text": "POSSESS UI 목업 v1 — 기존 게임 팔레트(민트·오렌지·크림·다크틸) 유지.\n폰트: Cinzel(숫자·워드마크) / Noto Serif KR(제목) / Noto Sans KR(본문) — 전부 OFL, 상용 무료.\n아이콘은 자리 표시용 선화. 실제 아이콘·초상화·키아트는 별도 제작." },
+    { "id": "guide-alt", "x": 1400, "y": 1760, "w": 520, "text": "대안 B: 같은 레이아웃, 팔레트만 뼈·황토·검붉음으로. 더 오컬트하고 따뜻한 톤.\n민트 톤(위)과 비교해서 하나를 고르면 나머지 화면도 그 팔레트로 통일." }
+  ],
+  "launch": { "view": "canvas" }
+}
