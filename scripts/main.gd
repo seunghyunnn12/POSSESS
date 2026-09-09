@@ -7,6 +7,8 @@ const Action = preload("res://scripts/action.gd")
 const ActionHud = preload("res://scripts/action_hud.gd")
 const Presentation = preload("res://scripts/presentation.gd")
 const Hud = preload("res://scripts/hud.gd")
+const UiPresenter = preload("res://scripts/ui_presenter.gd")
+var ui_presenter
 var arena
 var authority
 var presentation
@@ -65,11 +67,14 @@ func _ready() -> void:
 	layer.layer = 3
 	add_child(layer)
 	hud = ActionHud.new() if authority is Action else Hud.new()
-	hud.authority = authority
-	hud.presentation = presentation
 	hud.choice_requested.connect(_choose_upgrade)
 	hud.continue_requested.connect(_continue)
+	hud.key_requested.connect(_ui_key)
 	layer.add_child(hud)
+	ui_presenter = UiPresenter.new()
+	add_child(ui_presenter)
+	ui_presenter.setup(authority, camera)
+	hud.bind(ui_presenter)
 	authority.feedback.connect(_feedback)
 	# QA can bypass the title, while normal play always starts deliberately.
 	if "--play" in OS.get_cmdline_user_args():
@@ -79,6 +84,12 @@ func begin() -> void:
 	authority.paused = false
 	authority.start()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _ui_key(code: int) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.pressed = true
+	_unhandled_input(event)
 
 func _physics_process(_dt: float) -> void:
 	if guided_run and authority.phase == "training" and is_instance_valid(arena.practice_marker):
@@ -91,6 +102,12 @@ func _physics_process(_dt: float) -> void:
 		return
 	var move := Vector2(float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)), float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W)))
 	authority.submit_input(move, Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not suppress_fire, aim, Input.is_physical_key_pressed(KEY_F))
+
+func _input(event: InputEvent) -> void:
+	# Preserve the existing title shortcut before Control focus navigation uses Tab.
+	if authority != null and not authority.running and not authority.paused and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_TAB:
+		_unhandled_input(event)
+		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:

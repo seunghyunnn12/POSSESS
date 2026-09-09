@@ -2,7 +2,7 @@
 config_version=5
 
 [application]
-config/name="POSSESS — The Borrowed Flesh | 0.5"
+config/name="POSSESS | 0.6"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/description="A possession FPS with six host weapons, elemental combat and uninterrupted room battles."
@@ -25,3 +25,11 @@ common/physics_ticks_per_second=60
 
 [audio]
 driver/enable_input=false
+
+[internationalization]
+locale/translations=PackedStringArray("res://locale/ko.ko.translation")
+locale/fallback="ko"
+locale/test="ko"
+
+[gui]
+theme/custom="res://theme/possess.tres"

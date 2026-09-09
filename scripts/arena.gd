@@ -2,6 +2,7 @@ extends Node3D
 ## Static room and art construction; no gameplay decisions.
 
 const Actor = preload("res://scripts/actor.gd")
+const Visuals = preload("res://scripts/visuals.gd")
 const Traits = preload("res://scripts/traits.gd")
 var enemies: Array = []
 var run_seed := 0
@@ -149,7 +150,9 @@ func build_room() -> void:
 	for x in [-1.5, 0.0, 1.5]:
 		box(self, Vector3(0.045, 3.4, 0.1), Vector3(x, 2.7, -20.1), amber)
 	var title := Label3D.new()
-	title.text = {"training": "AWAKENING", "hall": "FORGOTTEN HALL", "vault": "WATCHER'S VAULT"}.get(layout, "THE BORROWED FLESH")
+	title.name = "RoomTitle"
+	title.text = tr("ROOM_" + layout.to_upper())
+	title.font = Visuals.THEME.default_font
 	title.font_size = 48
 	title.pixel_size = 0.006
 	title.position = Vector3(0, 6.5, -20.1)
@@ -174,6 +177,11 @@ func build_room() -> void:
 	sun.shadow_enabled = true
 	add_child(sun)
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		var title := get_node_or_null("RoomTitle") as Label3D
+		if title != null: title.text = tr("ROOM_" + layout.to_upper())
+
 func light(pos: Vector3, color: Color, energy: float, reach: float) -> void:
 	var lamp := OmniLight3D.new()
 	lamp.position = pos
@@ -192,15 +200,15 @@ func spawn(kind: String, pos: Vector3, delay: float, trait_id: String = "common"
 	actor.attack_clock = delay
 	add_child(actor)
 	enemies.append(actor)
-	var path := "res://assets/characters/skeletons/Skeleton_Warrior.glb" if kind in ["brute", "shotgun"] else ("res://assets/characters/skeletons/Skeleton_Mage.glb" if kind in ["mage", "storm"] else "res://assets/characters/skeletons/Skeleton_Rogue.glb")
-	var packed = load(path)
+	var binding := Visuals.host(kind)
+	var packed = load(binding.path)
 	actor.visual = Node3D.new()
 	actor.add_child(actor.visual)
 	if packed is PackedScene:
 		var model = packed.instantiate()
 		actor.visual.add_child(model)
 		# Source heights: Rogue 2.308m, Warrior 2.590m. Match hit capsules.
-		model.scale = Vector3.ONE * (0.88 if kind == "brute" else 0.79)
+		model.scale = Vector3.ONE * binding.scale
 		actor.animation = find_animation(model)
 	else:
 		box(actor.visual, Vector3(0.75, 1.3, 0.5), Vector3(0, 0.9, 0), brass)
@@ -229,9 +237,7 @@ func spawn(kind: String, pos: Vector3, delay: float, trait_id: String = "common"
 	actor.label.position.y = (2.85 if kind == "brute" else 2.25) + (0.2 if actor.profile.special else 0.0)
 	actor.label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	actor.label.font_size = 42
-	var font := SystemFont.new()
-	font.font_names = PackedStringArray(["Malgun Gothic"])
-	actor.label.font = font
+	actor.label.font = Visuals.THEME.default_font
 	actor.label.outline_size = 10
 	actor.label.pixel_size = 0.01 if actor.profile.special else 0.006
 	actor.label.no_depth_test = false
@@ -272,7 +278,7 @@ func spawn_encounter(spec: Dictionary, summoned: bool = false) -> void:
 		actor.rewarded = summoned
 	if spec.boss != "":
 		spawn("brute", Vector3(0, 0.05, -13), 4, spec.boss)
-		enemies[-1].scale = Vector3.ONE * 1.4
+		enemies[-1].scale = Vector3.ONE * Visuals.BOSS_SCALE
 		var ring := MeshInstance3D.new()
 		var torus := TorusMesh.new()
 		torus.inner_radius = 6.0

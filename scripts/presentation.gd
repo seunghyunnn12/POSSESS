@@ -3,6 +3,8 @@ extends Node3D
 const Arena = preload("res://scripts/arena.gd")
 const Authority = preload("res://scripts/authority.gd")
 const Sound = preload("res://scripts/sound.gd")
+const Visuals = preload("res://scripts/visuals.gd")
+const UiText = preload("res://scripts/ui_text.gd")
 var authority
 var camera: Camera3D
 var hands: Node3D
@@ -25,8 +27,6 @@ var shake := 0.0
 var swing := 0.0
 var clock := 0.0
 var displayed_soul := 1.0
-var notice := ""
-var notice_left := 0.0
 var random := RandomNumberGenerator.new()
 var fragments: Dictionary = {}
 var fx_tweens: Array[Tween] = []
@@ -146,7 +146,6 @@ func _process(dt: float) -> void:
 	shake = move_toward(shake, 0.0, dt * 1.0)
 	swing = move_toward(swing, 0.0, dt * 2.4)
 	hit_marker = maxf(0.0, hit_marker - dt)
-	notice_left = maxf(0.0, notice_left - dt)
 	var is_body: bool = authority.state == Authority.State.Body
 	var rot: float = 1.0 - authority.decay / authority.decay_max if is_body else 0.0
 	displayed_soul = move_toward(displayed_soul, 0.0 if is_body else 1.0, dt * 4.0)
@@ -179,18 +178,20 @@ func _process(dt: float) -> void:
 		spell_orb.material_override.albedo_color = Color("ff8660") if authority.body_kind == "mage" else Color("c6a0ff")
 		spell_orb.material_override.emission = spell_orb.material_override.albedo_color
 	skin.albedo_color = Color("b6ac90").lerp(Color("624569"), rot)
+	var aimed = authority.aimed_actor()
 	for actor in authority.actors:
 		if not actor.alive or actor.claimed:
 			continue
 		actor.flash = maxf(0.0, actor.flash - dt)
 		var probability: float = authority.capture_chance(actor)
-		actor.label.text = (actor.profile.name + "\n" if actor.profile.special else "") + "%.1f%%" % (probability * 100)
+		actor.label.text = tr("TARGET") % (probability * 100)
 		if authority.get("action_mode") == true:
-			actor.label.text = (actor.profile.name if actor.profile.get("boss", false) else preload("res://scripts/weapons.gd").info(actor.kind).name) + "\n%.0f%%" % (probability * 100)
-			if actor.burn_left > 0: actor.label.text += " · 화상"
-			if actor.frost_left > 0: actor.label.text += " · 둔화"
+			actor.label.text = UiText.data(actor.profile.name if actor.profile.get("boss", false) else preload("res://scripts/weapons.gd").info(actor.kind).name) + "\n" + tr("TARGET") % (probability * 100)
+			if actor.burn_left > 0: actor.label.text += " · " + tr("TARGET_STATUS_FIRE")
+			if actor.frost_left > 0: actor.label.text += " · " + tr("TARGET_STATUS_ICE")
 		actor.label.font_size = 30 if actor.profile.special else 42
 		actor.label.no_depth_test = is_body and authority.body_profile.get("id", "") == "seer" and actor.position.distance_to(authority.player.position) < 12.0
+		actor.label.visible = authority.running and not authority.is_frozen() and (aimed == actor or actor.label.no_depth_test)
 		var ready_color: Color = actor.profile.color if actor.profile.special else (Color("84ffd4") if probability > 0.5 else Color("e4e6dd"))
 		actor.label.modulate = Color("ff9c68") if actor.windup > 0.0 else ready_color
 		actor.visual.scale = Vector3.ONE * (1.045 if actor.flash > 0.0 else 1.0)
@@ -206,11 +207,7 @@ func animate(actor) -> void:
 	if actor.animation_state == desired:
 		return
 	actor.animation_state = desired
-	var chosen := "Idle_Combat"
-	if desired == "walk":
-		chosen = "Walking_A"
-	elif desired == "attack":
-		chosen = "2H_Melee_Attack_Chop" if actor.kind == "brute" else "2H_Ranged_Shoot"
+	var chosen: String = Visuals.host(actor.kind)[desired]
 	if actor.animation.has_animation(chosen):
 		var animation: Animation = actor.animation.get_animation(chosen)
 		animation.loop_mode = Animation.LOOP_LINEAR if desired != "attack" else Animation.LOOP_NONE
@@ -227,15 +224,9 @@ func on_feedback(event: String, data: Dictionary) -> void:
 			sound.play("shotgun" if data.role == "shotgun" else ("arrow" if data.role == "archer" else "rifle"))
 		"element_burst":
 			burst(data.at, data.color, 1.1)
-		"element_notice":
-			notice = data.text
-			notice_left = 1.0
 		"dash":
 			pulse = 0.2
 			sound.play("swing", -4)
-		"soul_focus":
-			notice = "다음 몸을 고르세요"
-			notice_left = 2
 		"fallen":
 			var actor = data.actor
 			if actor.animation != null: actor.animation.stop()
@@ -272,18 +263,11 @@ func on_feedback(event: String, data: Dictionary) -> void:
 		"inhabit":
 			pulse = 0.65
 			shake = 0.4
-			notice = preload("res://scripts/weapons.gd").info(authority.body_kind).weapon + " 획득 · " + preload("res://scripts/weapons.gd").info(authority.body_kind).tip
-			notice_left = 2.5
 			sound.play("inhabit", 2)
 		"rejected":
 			pain = 0.5
 			shake = 0.65
-			notice = "빙의 실패 · 위장 해제"
-			notice_left = 0.7
 			sound.play("rejected")
-		"unreachable":
-			notice = "OUT OF REACH" if authority.aimed_actor() != null else "NO HOST"
-			notice_left = 0.65
 		"eject":
 			pulse = 0.7
 			shake = 0.7 if data.explode else 0.25
@@ -306,15 +290,11 @@ func on_feedback(event: String, data: Dictionary) -> void:
 		"reload", "loaded":
 			sound.play(event)
 		"exposed":
-			notice = "감시자에게 발각됨" if data.reason == "seer" else "정체 노출"
-			notice_left = 1.5
 			if data.reason == "seer":
 				sound.play("rejected")
 		"detection":
 			sound.play("loaded", -4)
 		"supply":
-			notice = "보존제 · 수명 +%.1f초" % data.restored
-			notice_left = 1.5
 			sound.play("inhabit", -3)
 		"fragment":
 			var orb := Arena.box(self, Vector3.ONE * 0.18, data.position, Arena.material(Color("a8a1ff"), 2.0))
