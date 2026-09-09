@@ -66,8 +66,11 @@ func select_route(index: int) -> void:
 func can_leave_room() -> bool:
 	if not running or is_frozen() or outcome != "" or not (phase == "rest" or (phase == "training" and lesson == 7)):
 		return false
-	var delta := Vector3(0, 1.4, -19) - eye()
-	return delta.length() < 3.2 and forward().dot(delta.normalized()) > 0.6 and ray(eye(), Vector3(0, 1.4, -19), 1).is_empty()
+	# Match the visible doorway, including its edges and the wall contact point.
+	# Facing uses the door normal so looking up at the lintel still works.
+	var target := Vector3(clampf(eye().x, -2.9, 2.9), eye().y, -20.1)
+	var facing := Vector3(forward().x, 0, forward().z).normalized()
+	return absf(player.position.x) < 3.3 and player.position.z <= -17.0 and player.position.z > -20.6 and facing.dot(Vector3.FORWARD) > 0.6 and ray(eye(), target, 1).is_empty()
 
 func leave_room() -> void:
 	if can_leave_room() and route_pending():

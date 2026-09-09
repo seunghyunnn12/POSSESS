@@ -5,8 +5,11 @@ func draw_journey() -> void:
 	if authority.phase == "training":
 		centered("WASD 이동  ·  좌클릭으로 약화  ·  우클릭으로 빙의", 200, 22, mint)
 		if authority.lesson >= 3:
-			centered("몸을 가진 채 문으로 이동 · 가까이서 F", 240, 21, cream)
-		centered("안전한 연습 · Enter 없이 직접 움직여 익히세요", 550, 16, muted)
+			centered("몸을 가진 채 문으로 이동 · 가까이서 F 길게 누르기", 240, 21, cream)
+		if authority.can_leave_room():
+			draw_gate_prompt()
+		else:
+			centered("안전한 연습 · Enter 없이 직접 움직여 익히세요", 550, 16, muted)
 		return
 	draw_expedition()
 
@@ -39,8 +42,7 @@ func draw_expedition() -> void:
 		if authority.plans[authority.room_index].secret and not authority.secret_taken:
 			centered("벽 주변의 작은 금빛 문양에 비밀이 있습니다", 279, 15, orange)
 	if authority.can_leave_room():
-		centered("[ F 길게 ] " + ("원정 마치기" if authority.room_index == authority.room_total else "몸을 유지하고 다음 방으로"), 535, 21, mint)
-		draw_rect(Rect2(540, 548, 200 * authority.gate_hold / 0.65, 4), mint)
+		draw_gate_prompt()
 	if authority.can_find_secret():
 		centered("[ F 길게 ] 유물 획득", 535, 20, orange)
 	if authority.wave_wait > 0:
@@ -68,6 +70,11 @@ func draw_expedition() -> void:
 		centered(authority.banner, 483, 15, mint)
 	if authority.state == Authority.State.Possessing:
 		centered("새 몸으로", 275, 24, mint)
+
+func draw_gate_prompt() -> void:
+	centered("[ F 길게 누르기 ] " + ("원정 마치기" if authority.room_index == authority.room_total else "몸을 유지하고 다음 방으로"), 535, 21, mint)
+	draw_rect(Rect2(540, 548, 200, 4), Color("33434b"))
+	draw_rect(Rect2(540, 548, 200 * clampf(authority.gate_hold / 0.65, 0, 1), 4), mint)
 
 func world_line(from: Vector3, to: Vector3) -> void:
 	if presentation.camera.is_position_behind(from) or presentation.camera.is_position_behind(to): return
