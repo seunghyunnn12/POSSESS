@@ -20,6 +20,10 @@ var attributes: Dictionary = {}
 var rewarded := false
 var home := Vector3.ZERO
 var detection := 0.0
+var burn_left := 0.0
+var burn_clock := 0.0
+var frost_left := 0.0
+var stagger_left := 0.0
 
 func setup(role: String) -> void:
 	kind = role

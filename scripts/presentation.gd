@@ -9,6 +9,11 @@ var hands: Node3D
 var soul_hands: Node3D
 var rifle: Node3D
 var hammer: Node3D
+var shotgun: Node3D
+var bow: Node3D
+var staff: Node3D
+var spell_orb: MeshInstance3D
+var projectile_visuals: Dictionary = {}
 var skin: StandardMaterial3D
 var shader: ShaderMaterial
 var sound
@@ -76,6 +81,26 @@ func build_hands() -> void:
 	Arena.box(hammer, Vector3(0.075, 0.95, 0.075), Vector3(0.43, -0.01, -0.7), trim)
 	Arena.box(hammer, Vector3(0.48, 0.25, 0.23), Vector3(0.43, 0.43, -0.7), iron)
 	Arena.box(hammer, Vector3(0.51, 0.055, 0.25), Vector3(0.43, 0.43, -0.7), glow)
+	shotgun = Node3D.new()
+	hands.add_child(shotgun)
+	for x in [0.23, 0.36]:
+		Arena.box(shotgun, Vector3(0.105, 0.11, 0.9), Vector3(x, -0.21, -0.85), iron)
+	Arena.box(shotgun, Vector3(0.3, 0.15, 0.3), Vector3(0.3, -0.25, -0.48), trim)
+	bow = Node3D.new()
+	hands.add_child(bow)
+	for i in 12:
+		var angle := -PI / 2 + i * PI / 12
+		var next_angle := -PI / 2 + (i + 1) * PI / 12
+		var from := Vector3(-0.33 - cos(angle) * 0.19, sin(angle) * 0.48 - 0.1, -0.7)
+		var to := Vector3(-0.33 - cos(next_angle) * 0.19, sin(next_angle) * 0.48 - 0.1, -0.7)
+		var segment := Arena.box(bow, Vector3(0.028, from.distance_to(to) + 0.015, 0.028), (from + to) * 0.5, Arena.material(Color("5299bc"), 0.35))
+		segment.quaternion = Quaternion(Vector3.UP, (to - from).normalized())
+	Arena.box(bow, Vector3(0.01, 0.96, 0.01), Vector3(-0.33, -0.1, -0.7), trim)
+	Arena.box(bow, Vector3(0.018, 0.018, 0.75), Vector3(-0.33, -0.1, -0.83), glow)
+	staff = Node3D.new()
+	hands.add_child(staff)
+	Arena.box(staff, Vector3(0.065, 0.9, 0.065), Vector3(0.4, -0.15, -0.7), trim)
+	spell_orb = Arena.sphere(staff, 0.12, Vector3(0.4, 0.31, -0.7), Arena.material(Color("ff602f"), 0.35))
 
 func _process(dt: float) -> void:
 	if authority == null:
@@ -98,6 +123,20 @@ func _process(dt: float) -> void:
 	if frozen:
 		return
 	clock += dt
+	if authority.get("projectiles") != null:
+		var ids: Dictionary = {}
+		for p in authority.projectiles:
+			ids[p.id] = true
+			if not projectile_visuals.has(p.id):
+				var color := Color("78dfff") if p.element == "ice" else (Color("ff8660") if p.element == "fire" else Color("c6a0ff"))
+				projectile_visuals[p.id] = Arena.box(self, Vector3(0.03, 0.03, 0.65), p.at, Arena.material(color, 0.6)) if p.element == "ice" else Arena.sphere(self, 0.16, p.at, Arena.material(color, 0.6))
+			projectile_visuals[p.id].position = p.at
+			if p.element == "ice":
+				projectile_visuals[p.id].look_at(p.at + p.velocity, Vector3.RIGHT if absf(p.velocity.normalized().y) > 0.98 else Vector3.UP)
+		for id in projectile_visuals.keys():
+			if not ids.has(id):
+				projectile_visuals[id].queue_free()
+				projectile_visuals.erase(id)
 	hands.visible = authority.state != Authority.State.Possessing
 	if authority.state == Authority.State.Possessing:
 		pulse = maxf(pulse, 0.75)
@@ -131,6 +170,14 @@ func _process(dt: float) -> void:
 	soul_hands.visible = not is_body
 	rifle.visible = is_body and authority.body_kind == "soldier"
 	hammer.visible = is_body and authority.body_kind == "brute"
+	shotgun.visible = is_body and authority.body_kind == "shotgun"
+	bow.visible = is_body and authority.body_kind == "archer"
+	staff.visible = is_body and authority.body_kind in ["mage", "storm"]
+	if bow.visible:
+		bow.position.z = authority.get("bow_charge") * 0.12
+	if staff.visible:
+		spell_orb.material_override.albedo_color = Color("ff8660") if authority.body_kind == "mage" else Color("c6a0ff")
+		spell_orb.material_override.emission = spell_orb.material_override.albedo_color
 	skin.albedo_color = Color("b6ac90").lerp(Color("624569"), rot)
 	for actor in authority.actors:
 		if not actor.alive or actor.claimed:
@@ -138,6 +185,10 @@ func _process(dt: float) -> void:
 		actor.flash = maxf(0.0, actor.flash - dt)
 		var probability: float = authority.capture_chance(actor)
 		actor.label.text = (actor.profile.name + "\n" if actor.profile.special else "") + "%.1f%%" % (probability * 100)
+		if authority.get("action_mode") == true:
+			actor.label.text = (actor.profile.name if actor.profile.get("boss", false) else preload("res://scripts/weapons.gd").info(actor.kind).name) + "\n%.0f%%" % (probability * 100)
+			if actor.burn_left > 0: actor.label.text += " · 화상"
+			if actor.frost_left > 0: actor.label.text += " · 둔화"
 		actor.label.font_size = 30 if actor.profile.special else 42
 		actor.label.no_depth_test = is_body and authority.body_profile.get("id", "") == "seer" and actor.position.distance_to(authority.player.position) < 12.0
 		var ready_color: Color = actor.profile.color if actor.profile.special else (Color("84ffd4") if probability > 0.5 else Color("e4e6dd"))
@@ -167,6 +218,39 @@ func animate(actor) -> void:
 
 func on_feedback(event: String, data: Dictionary) -> void:
 	match event:
+		"tracer":
+			beam(data.from, data.to, data.color, 0.09)
+		"weapon_fire":
+			recoil = 0.48 if data.role == "shotgun" else 0.2
+			shake = 0.25 if data.role == "shotgun" else 0.06
+			hit_marker = 0.16 if data.hit else 0
+			sound.play("shotgun" if data.role == "shotgun" else ("arrow" if data.role == "archer" else "rifle"))
+		"element_burst":
+			burst(data.at, data.color, 1.1)
+		"element_notice":
+			notice = data.text
+			notice_left = 1.0
+		"dash":
+			pulse = 0.2
+			sound.play("swing", -4)
+		"soul_focus":
+			notice = "다음 몸을 고르세요"
+			notice_left = 2
+		"fallen":
+			var actor = data.actor
+			if actor.animation != null: actor.animation.stop()
+			var tween := create_tween()
+			fx_tweens.append(tween)
+			tween.tween_property(actor.visual, "rotation:x", -PI * 0.48, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tween.tween_interval(1.0)
+			tween.tween_property(actor.visual, "scale", Vector3.ONE * 0.01, 0.45)
+			tween.tween_callback(actor.hide)
+		"impact":
+			var actor = data.actor
+			actor.visual.rotation.z = random.randf_range(-0.1, 0.1)
+			var tween := create_tween()
+			fx_tweens.append(tween)
+			tween.tween_property(actor.visual, "rotation:z", 0.0, 0.12)
 		"milestone":
 			pulse = 0.35
 			sound.play("clear", -3)
@@ -188,7 +272,7 @@ func on_feedback(event: String, data: Dictionary) -> void:
 		"inhabit":
 			pulse = 0.65
 			shake = 0.4
-			notice = preload("res://scripts/traits.gd").host_name(authority.body_kind, authority.body_profile) + " 빙의 성공 · " + ("좌클릭: 연발총 / R: 재장전" if authority.body_kind == "soldier" else "좌클릭: 망치 공격")
+			notice = preload("res://scripts/weapons.gd").info(authority.body_kind).weapon + " 획득 · " + preload("res://scripts/weapons.gd").info(authority.body_kind).tip
 			notice_left = 2.5
 			sound.play("inhabit", 2)
 		"rejected":

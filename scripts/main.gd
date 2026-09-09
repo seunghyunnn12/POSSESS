@@ -3,6 +3,8 @@ const Arena = preload("res://scripts/arena.gd")
 const Authority = preload("res://scripts/authority.gd")
 const Journey = preload("res://scripts/journey.gd")
 const Campaign = preload("res://scripts/campaign.gd")
+const Action = preload("res://scripts/action.gd")
+const ActionHud = preload("res://scripts/action_hud.gd")
 const Presentation = preload("res://scripts/presentation.gd")
 const Hud = preload("res://scripts/hud.gd")
 var arena
@@ -15,6 +17,7 @@ var aim := Vector2(0.48, -0.08)
 var run_seed := 0
 var guided_run := true
 var campaign_run := true
+var action_run := true
 var suppress_fire := false
 
 func _ready() -> void:
@@ -40,7 +43,7 @@ func _ready() -> void:
 	shape.shape = capsule
 	player.add_child(shape)
 	add_child(player)
-	authority = (Campaign.new() if campaign_run else Journey.new()) if guided_run else Authority.new()
+	authority = ((Action.new() if action_run else Campaign.new()) if campaign_run else Journey.new()) if guided_run else Authority.new()
 	if authority is Campaign:
 		authority.run_seed = run_seed
 	authority.name = "authority"
@@ -61,7 +64,7 @@ func _ready() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 3
 	add_child(layer)
-	hud = Hud.new()
+	hud = ActionHud.new() if authority is Action else Hud.new()
 	hud.authority = authority
 	hud.presentation = presentation
 	hud.choice_requested.connect(_choose_upgrade)
@@ -132,6 +135,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					authority.request("reload")
 			KEY_E:
 				authority.request("eject")
+			KEY_SHIFT:
+				authority.request("dash")
 			KEY_SPACE:
 				authority.request("jump")
 			KEY_M:
@@ -150,6 +155,8 @@ func _notification(what: int) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _feedback(event: String, data: Dictionary) -> void:
+	if event == "kick":
+		aim = Vector2(authority.yaw, authority.pitch)
 	if event == "load_room":
 		remove_child(arena)
 		arena.queue_free()

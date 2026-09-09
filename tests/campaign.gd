@@ -23,6 +23,7 @@ func move_to_gate() -> void:
 
 func run() -> void:
 	game = Main.new()
+	game.action_run = false
 	game.run_seed = 731
 	root.add_child(game)
 	current_scene = game

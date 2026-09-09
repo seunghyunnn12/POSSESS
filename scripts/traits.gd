@@ -1,4 +1,5 @@
 extends RefCounted
+const Weapons = preload("res://scripts/weapons.gd")
 ## Immutable definitions. Each host gets its own rolled profile exactly once.
 const DEFINITIONS := {
 	"warden": {"name": "묘지기", "description": "중간 보스의 몸. 피해 +40%, 수명 +60%. 이동 -15%.", "boss": true, "resistance": 0.5, "color": Color("ffca70"), "power": 1.4, "life": 1.6, "move": 0.85, "health": 5.0},
@@ -21,22 +22,24 @@ static func profile(id: String = "common", random: RandomNumberGenerator = null)
 
 static func stats(kind: String, individual: Dictionary) -> Dictionary:
 	var brute := kind == "brute"
+	var weapon := Weapons.info(kind)
 	var attack: float = individual.get("attack_iv", 1.0)
 	var movement: float = individual.get("move_iv", 1.0) * individual.get("move", 1.0)
 	var vitality: float = individual.get("vitality_iv", 1.0)
 	return {
-		"damage": (68.0 if brute else 22.0) * attack * individual.get("power", 1.0),
-		"move": (4.5 if brute else 6.0) * movement,
-		"life": (35.0 if brute else 25.0) * vitality * individual.get("life", 1.0),
-		"interval": (0.8 if brute else 0.13) / individual.get("rate", 1.0),
-		"reload": 1.3 / individual.get("reload", 1.0),
+		"damage": weapon.damage * attack * individual.get("power", 1.0),
+		"move": weapon.move * movement,
+		"life": weapon.life * vitality * individual.get("life", 1.0),
+		"interval": weapon.interval / individual.get("rate", 1.0),
+		"reload": weapon.reload / individual.get("reload", 1.0),
+		"magazine": weapon.magazine,
 		"recoil": (0.24 if brute else 0.19) * individual.get("recoil", 1.0),
 		"damage_taken": 0.6 if brute else 1.0,
-		"host_health": (160.0 if brute else 100.0) * vitality * individual.get("health", 1.0),
+		"host_health": weapon.health * vitality * individual.get("health", 1.0),
 		"enemy_move": (2.8 if brute else 2.5) * movement,
 		"enemy_damage": (4.0 if brute else 2.0) * attack,
 		"enemy_interval": (2.5 if brute else 2.4) / individual.get("rate", 1.0)
 	}
 
 static func host_name(kind: String, individual: Dictionary) -> String:
-	return "%s %s" % [individual.get("name", "일반"), "브루트" if kind == "brute" else "병사"]
+	return "%s %s" % [individual.get("name", "일반"), Weapons.info(kind).name]

@@ -62,7 +62,7 @@ func _draw() -> void:
 		text_at("적의 몸을 빌려, 다음 방으로 살아 나가세요.", Vector2(92, 418), 23, cream)
 		text_at("[ ENTER / 클릭 ]  안전한 연습방에서 시작", Vector2(92, 531), 21, mint)
 		text_at("[ TAB ]  연습 건너뛰기 · 전투 준비 화면으로", Vector2(92, 575), 16, muted)
-		text_at("0.4  /  일곱 구역의 원정 · 비밀 · 조합 · 군주", Vector2(92, 653), 13, muted)
+		text_at("0.5  /  여섯 가지 몸 · 속성 전투 · 이어지는 원정", Vector2(92, 653), 13, muted)
 		text_at("ESC  /  정보 · 조작", Vector2(1007, 653), 13, muted)
 		if authority.paused:
 			draw_pause()
@@ -74,7 +74,7 @@ func _draw() -> void:
 	line(Vector2(36, 83), Vector2(1244, 83), Color(0.7, 0.9, 0.85, 0.15))
 	var body: bool = authority.state == Authority.State.Body
 	var tint := orange if body else mint
-	var label: String = ("병사의 몸" if authority.body_kind == "soldier" else "브루트의 몸") if body else "유령"
+	var label: String = (Traits.Weapons.info(authority.body_kind).name + "의 몸") if body else "유령"
 	var fraction: float = authority.decay / authority.decay_max if body else authority.soul / 20.0
 	var seconds: float = authority.decay if body else authority.soul
 	text_at(label, Vector2(40, 610), 23, tint)
@@ -85,7 +85,7 @@ func _draw() -> void:
 	text_at("빙의 %d회" % authority.possession_count, Vector2(40, 691), 12, muted)
 	if body:
 		text_at(authority.body_profile.get("name", "일반"), Vector2(40, 580), 14, authority.body_profile.get("color", mint))
-		centered("위장 중 · 일반 적은 동료로 인식" if authority.disguised else "정체 노출 · 다른 몸으로 숨어드세요", 117, 16, mint if authority.disguised else orange)
+		centered(("위장 · 공격하면 풀립니다" if authority.disguised else "전투 중") if authority.get("action_mode") == true else ("위장 중 · 일반 적은 동료로 인식" if authority.disguised else "정체 노출 · 다른 몸으로 숨어드세요"), 117, 16, mint if authority.disguised else orange)
 		if authority.detection > 0.0:
 			centered("감시자가 영혼을 감지하는 중", 147, 14, Color("d5a0ff"))
 			draw_rect(Rect2(520, 157, 240, 5), Color("26373d"))
@@ -94,14 +94,14 @@ func _draw() -> void:
 	text_at("%d / %d" % [authority.xp, authority.xp_next], Vector2(750, 655), 13, muted)
 	draw_rect(Rect2(466, 667, 350, 4), Color("26373d"))
 	draw_rect(Rect2(466, 667, 350.0 * authority.xp / authority.xp_next, 4), Color("b7adff"))
-	if body and authority.body_kind == "soldier":
-		text_at("연발총 · 좌클릭", Vector2(1080, 610), 14, muted)
+	if body and Traits.Weapons.info(authority.body_kind).magazine > 0:
+		text_at(Traits.Weapons.info(authority.body_kind).weapon, Vector2(1080, 610), 14, muted)
 		text_at("%02d" % authority.ammo, Vector2(1098, 655), 40, cream)
-		text_at("/ 18", Vector2(1170, 653), 20, muted)
+		text_at("/ %d" % Traits.Weapons.info(authority.body_kind).magazine, Vector2(1170, 653), 20, muted)
 		if authority.reload_left > 0.0:
 			text_at("재장전 중", Vector2(1100, 680), 12, orange)
 	elif body:
-		text_at("망치 · 좌클릭", Vector2(1070, 625), 16, orange)
+		text_at(Traits.Weapons.info(authority.body_kind).weapon, Vector2(1070, 625), 16, orange)
 	else:
 		text_at("유령탄 · 좌클릭", Vector2(1070, 625), 16, mint)
 	text_at("%03d FPS   /   ESC" % roundi(fps), Vector2(1117, 704), 11, muted)
@@ -330,10 +330,10 @@ func draw_pause() -> void:
 	elif not has_body:
 		status = "유령"
 	stat_row("신분", status, Vector2(63, 285), 285)
-	stat_row("현재 공격 피해", "%.1f" % stats.damage, Vector2(63, 322), 285)
+	stat_row("산탄 1발 피해 (×6)" if authority.body_kind == "shotgun" else ("최대 충전 피해" if authority.body_kind == "archer" else "현재 공격 피해"), "%.1f" % stats.damage, Vector2(63, 322), 285)
 	stat_row("공격 속도", "초당 %.2f회" % (1.0 / stats.interval), Vector2(63, 359), 285)
 	stat_row("이동 속도", "%.2f m/s" % stats.move, Vector2(63, 396), 285)
-	stat_row("재장전", "%.2f초" % stats.reload if has_body and authority.body_kind == "soldier" else "해당 없음", Vector2(63, 433), 285)
+	stat_row("재장전", "%.2f초" % stats.reload if has_body and Traits.Weapons.info(authority.body_kind).magazine > 0 else "해당 없음", Vector2(63, 433), 285)
 	stat_row("남은 부패" if has_body else "남은 소멸", "%.1f / %.1f초" % [authority.decay if has_body else authority.soul, authority.decay_max if has_body else 20], Vector2(429, 285), 295)
 	stat_row("피격 부패 감소", "%d%%" % roundi((1.0 - stats.damage_taken) * 100) if has_body else "해당 없음", Vector2(429, 322), 295)
 	stat_row("원래 적의 체력", "%.1f" % stats.host_health if has_body else "—", Vector2(429, 359), 295)
@@ -356,7 +356,7 @@ func draw_pause() -> void:
 		y += 23
 	line(Vector2(824, 367), Vector2(1216, 367), Color("294049"))
 	text_at("조작", Vector2(824, 399), 18, cream)
-	var rows := ["WASD 이동 · 마우스 시점", "좌클릭 공격 · 우클릭 빙의", "F 길게 보급품 · E 몸 이탈", "R 재장전 / 결과 화면에서 재시작", "Space 점프 · M 효과음 켜기/끄기"]
+	var rows := ["WASD 이동 · 마우스 시점", "좌클릭 공격 · 우클릭 빙의", "F 길게 보급품 · E 몸 이탈", "R 재장전 / 결과 화면에서 재시작", "Shift 회피 · Space 점프 · M 음소거"]
 	for i in rows.size():
 		text_at(rows[i], Vector2(824, 433 + i * 29), 14, muted)
 	centered("[ ESC ]  증강 선택으로 돌아가기" if not authority.upgrade_choices.is_empty() else "[ ESC ]  돌아가기", 667, 20, mint)

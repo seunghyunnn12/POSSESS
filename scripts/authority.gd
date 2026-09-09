@@ -277,6 +277,8 @@ func finish_possession() -> void:
 	invulnerable = 0.5
 	target.alive = false
 	target.hide()
+	if target.animation != null:
+		target.animation.stop()
 	reward_host(target, true)
 	target = null
 	feedback.emit("inhabit", {"kind": body_kind})

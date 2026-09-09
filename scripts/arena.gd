@@ -89,6 +89,21 @@ func _ready() -> void:
 	spawn("brute", Vector3(-4, 0.05, -12), 3.5, "preserved")
 
 func build_room() -> void:
+	if layout == "gallery":
+		for x in [-4, 4]:
+			box(self, Vector3(0.7, 3.5, 11), Vector3(x, 1.75, -8), stone, true)
+			box(self, Vector3(0.08, 0.1, 11), Vector3(x, 3.55, -8), amber)
+	elif layout == "crossroads":
+		for x in [-8, 8]:
+			for z in [-4, -12]:
+				box(self, Vector3(8, 3.2, 0.7), Vector3(x, 1.6, z), stone, true)
+				box(self, Vector3(7.8, 0.08, 0.08), Vector3(x, 3.23, z), mint)
+	elif layout == "terraces":
+		for x in [-9, 9]:
+			var ramp := box(self, Vector3(4, 0.25, 8), Vector3(x, 0.65, -4), stone, true)
+			ramp.rotation.x = atan(1.2 / 8)
+			box(self, Vector3(4, 0.4, 7), Vector3(x, 1.05, -11.5), stone, true)
+			box(self, Vector3(0.08, 0.08, 7), Vector3(x, 1.3, -11.5), mint)
 	if layout == "vault":
 		stone = material(Color("352c43"))
 		mint = material(Color("bca0ff"), 2.5)
@@ -116,7 +131,8 @@ func build_room() -> void:
 			box(self, Vector3(2.2, 0.35, 2.2), Vector3(x, 0.18, z), brass)
 			box(self, Vector3(2.2, 0.35, 2.2), Vector3(x, 5.9, z), brass)
 			box(self, Vector3(0.12, 3.0, 0.12), Vector3(x + (1.0 if x < 0 else -1.0), 3.1, z), mint)
-			light(Vector3(x + (1.5 if x < 0 else -1.5), 3.5, z), Color("71dcc5"), 1.8, 8)
+			if z in [-16.0, 2.0]:
+				light(Vector3(x + (1.5 if x < 0 else -1.5), 3.5, z), Color("71dcc5"), 1.8, 11)
 	for pos in [Vector3(-7, 0, 3), Vector3(7, 0, -12)]:
 		box(self, Vector3(2.8, 1.2, 1.8), pos + Vector3.UP * 0.6, stone, true)
 		box(self, Vector3(2.7, 0.05, 1.7), pos + Vector3.UP * 1.23, brass)
@@ -176,7 +192,7 @@ func spawn(kind: String, pos: Vector3, delay: float, trait_id: String = "common"
 	actor.attack_clock = delay
 	add_child(actor)
 	enemies.append(actor)
-	var path := "res://assets/characters/skeletons/Skeleton_Warrior.glb" if kind == "brute" else "res://assets/characters/skeletons/Skeleton_Rogue.glb"
+	var path := "res://assets/characters/skeletons/Skeleton_Warrior.glb" if kind in ["brute", "shotgun"] else ("res://assets/characters/skeletons/Skeleton_Mage.glb" if kind in ["mage", "storm"] else "res://assets/characters/skeletons/Skeleton_Rogue.glb")
 	var packed = load(path)
 	actor.visual = Node3D.new()
 	actor.add_child(actor.visual)
@@ -190,9 +206,20 @@ func spawn(kind: String, pos: Vector3, delay: float, trait_id: String = "common"
 		box(actor.visual, Vector3(0.75, 1.3, 0.5), Vector3(0, 0.9, 0), brass)
 		sphere(actor.visual, 0.3, Vector3(0, 1.8, 0), stone)
 	# Primitive weapon silhouettes remain readable with the supplied fantasy models.
-	if kind == "soldier":
+	if kind in ["soldier", "shotgun"]:
 		box(actor.visual, Vector3(0.16, 0.16, 0.85), Vector3(0.36, 1.1, 0.4), dark)
 		box(actor.visual, Vector3(0.58, 0.08, 0.13), Vector3(0.36, 1.1, 0.67), brass)
+		if kind == "shotgun":
+			box(actor.visual, Vector3(0.24, 0.20, 0.7), Vector3(0.36, 1.1, 0.45), brass)
+	elif kind == "archer":
+		for i in 9:
+			var angle := -PI / 2 + i * PI / 8
+			var piece := box(actor.visual, Vector3(0.06, 0.17, 0.05), Vector3(0.4 + cos(angle) * 0.3, 1.2 + sin(angle) * 0.55, 0.35), mint)
+			piece.rotation.z = angle
+		box(actor.visual, Vector3(0.015, 1.1, 0.015), Vector3(0.4, 1.2, 0.35), brass)
+	elif kind in ["mage", "storm"]:
+		box(actor.visual, Vector3(0.08, 1.4, 0.08), Vector3(0.5, 1.1, 0.2), brass)
+		sphere(actor.visual, 0.21, Vector3(0.5, 1.9, 0.2), material(Color("ff8660") if kind == "mage" else Color("c6a0ff"), 2.0))
 	else:
 		box(actor.visual, Vector3(0.12, 1.4, 0.12), Vector3(0.7, 1.0, 0.25), brass)
 		box(actor.visual, Vector3(0.75, 0.5, 0.25), Vector3(0.7, 1.65, 0.25), dark)
@@ -226,14 +253,21 @@ func spawn_encounter(spec: Dictionary, summoned: bool = false) -> void:
 	var random := RandomNumberGenerator.new()
 	random.seed = spec.seed
 	rolls.seed = spec.seed
-	var slots := [Vector3(-3, 0.05, -1), Vector3(5, 0.05, -3), Vector3(-7, 0.05, -9), Vector3(3, 0.05, -14), Vector3(-5, 0.05, -16)]
+	var slots := [Vector3(-2.5, 0.05, -1), Vector3(8, 0.05, -7), Vector3(-8, 0.05, -9), Vector3(2, 0.05, -16), Vector3(-8, 0.05, -17)]
+	if layout == "terraces":
+		slots = [Vector3(-2, 0.05, -1), Vector3(2, 0.05, -4), Vector3(-2, 0.05, -8), Vector3(2, 0.05, -13), Vector3(0, 0.05, -17)]
 	for i in int(spec.count):
 		var slot: Vector3 = slots[i % slots.size()] + Vector3(random.randf_range(-1, 1), 0, random.randf_range(-1, 1))
 		var trait_id: String = ["common", "swift", "preserved", "frenzied", "seer"][random.randi_range(0, 4)] if spec.tier > 1 else "common"
-		spawn("soldier" if i == 0 or random.randf() < 0.6 else "brute", slot, 3 + i * 0.7, trait_id)
+		var role := "soldier" if i == 0 or random.randf() < 0.6 else "brute"
+		if spec.get("varied", false):
+			role = ["soldier", "brute", "shotgun", "archer", "mage", "storm"][(i + int(spec.seed) % 6) % 6]
+		spawn(role, slot, 3 + i * 0.7, trait_id)
 		var actor = enemies[-1]
 		if spec.route == 1:
-			actor.max_hp *= 1.35
+			actor.profile.health = actor.profile.get("health", 1.0) * 1.35
+			actor.attributes = Traits.stats(actor.kind, actor.profile)
+			actor.max_hp = actor.attributes.host_health
 			actor.hp = actor.max_hp
 		actor.rewarded = summoned
 	if spec.boss != "":

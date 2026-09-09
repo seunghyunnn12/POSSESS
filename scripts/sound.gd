@@ -13,6 +13,8 @@ func _ready() -> void:
 		voices.append(voice)
 	bank.shot = tone(0.12, 630, 130, 0.2)
 	bank.rifle = tone(0.10, 180, 48, 0.7)
+	bank.shotgun = tone(0.23, 130, 30, 0.8)
+	bank.arrow = tone(0.16, 1100, 230, 0.15)
 	bank.hit = tone(0.055, 1400, 800, 0.4)
 	bank.possess = tone(0.75, 95, 1100, 0.13)
 	bank.inhabit = tone(0.28, 440, 220, 0.05)
