@@ -6,6 +6,11 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
+	var report_prefix := "v05"
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--report-prefix="):
+			var requested := argument.trim_prefix("--report-prefix=")
+			if requested.is_valid_identifier(): report_prefix = requested
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	var game := Main.new()
 	game.run_seed = 731
@@ -49,11 +54,11 @@ func run() -> void:
 	var average := total / deltas.size()
 	var report := "GPU: %s\nScenario: 8 enemies including boss, terraces, fire/ice/lightning projectiles\nFrames: %d\nMean: %.2f ms (%.1f FPS)\np95: %.2f ms\np99: %.2f ms\nPeak active projectiles: %d\n" % [RenderingServer.get_video_adapter_name(), deltas.size(), average, 1000 / average, deltas[int(deltas.size() * 0.95)], deltas[int(deltas.size() * 0.99)], peak_projectiles]
 	print(report)
-	var file := FileAccess.open("res://qa-output/v05-performance.txt", FileAccess.WRITE)
+	var file := FileAccess.open("res://qa-output/" + report_prefix + "-performance.txt", FileAccess.WRITE)
 	file.store_string(report)
 	file.close()
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://qa-output/v05-stress.png")
+	root.get_texture().get_image().save_png("res://qa-output/" + report_prefix + "-stress.png")
 	game.queue_free()
 	await process_frame
 	quit()

@@ -1,0 +1,7 @@
+GPU: AMD Radeon RX 580 2048SP
+Scenario: 8 enemies including boss, terraces, fire/ice/lightning projectiles
+Frames: 902
+Mean: 16.64 ms (60.1 FPS)
+p95: 18.09 ms
+p99: 19.05 ms
+Peak active projectiles: 7

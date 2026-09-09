@@ -19,6 +19,8 @@ func run() -> void:
 	await settle()
 	check(game.hud.screens.size() == 4, "four retained Control scenes loaded")
 	check(game.hud.screens.title.visible, "title is the only initial screen")
+	var slots: Array[Node] = game.hud.find_children("*", "TextureRect", true, false)
+	check(slots.size() == 10 and slots.all(func(slot): return slot.texture == null), "ten art placeholders remain empty and ready for replacement")
 	var shared: Theme = load("res://theme/possess.tres")
 	for screen in game.hud.screens.values():
 		check(screen.theme == shared, "%s uses the shared Theme" % screen.name)
@@ -36,7 +38,7 @@ func run() -> void:
 		for character in row[1]:
 			if character not in ["\n", "\r", "\t"] and not shared.default_font.has_char(character.unicode_at(0)) and character not in missing: missing += character
 	check(english_empty, "English CSV column remains empty for translation handoff")
-	check(missing.is_empty(), "all authored characters have bundled glyphs: " + missing)
+	check(missing.is_empty(), "all authored characters have bundled glyphs" + (": " + missing if not missing.is_empty() else ""))
 	await capture("title")
 	TranslationServer.set_locale("en")
 	game.ui_presenter.refresh()
@@ -128,7 +130,7 @@ func run() -> void:
 	sim.body_kind = "shotgun"
 	sim.body_profile = preload("res://scripts/traits.gd").profile("preserved")
 	sim.decay = 18.4
-	sim.decay_max = 39
+	sim.decay_max = sim.current_stats().life
 	sim.ammo = 4
 	game.player.position = Vector3(0, 0.05, 3)
 	sim.yaw = 0
@@ -137,6 +139,7 @@ func run() -> void:
 	for i in 35: await process_frame
 	await capture("hud")
 	key(KEY_ESCAPE)
+	game.hud.screens.pause.get_node("BodyTab").pressed.emit()
 	await capture("pause")
 	game.queue_free()
 	await process_frame

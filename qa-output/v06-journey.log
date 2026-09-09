@@ -1,0 +1,31 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: boot waits at title
+PASS: training safe beyond soul lifetime
+PASS: training cannot hurt player
+PASS: early possession blocked
+PASS: movement advances tutorial
+PASS: real shots weaken without killing training host
+PASS: weakened training capture guaranteed
+PASS: visible transfer takes longer than a blink
+PASS: capture teaches disguise without XP menu
+PASS: cannot lose required body before inspection
+PASS: inspection close prepares supply lesson
+PASS: training supply reachable through physics ray
+PASS: holding F restores lifetime and introduces second target
+PASS: body attack reveals identity and advances
+PASS: E returns to soul and unlocks exit
+PASS: exit is reachable without wall obstruction
+PASS: held F deliberately leaves room
+PASS: first room loaded with three hosts and briefing
+PASS: briefing keeps all clocks stopped
+PASS: Enter explicitly starts combat
+PASS: level notice precedes choice
+PASS: level notice resolves into three choices
+PASS: room clear waits for departure
+PASS: room clear allows unhurried rest
+PASS: distinct second room waits for ready
+PASS: body lifetime and augments survive room travel
+PASS: last room also waits for deliberate exit
+PASS: final gate completes journey
+JOURNEY RESULT: 28 checks, 0 failures
