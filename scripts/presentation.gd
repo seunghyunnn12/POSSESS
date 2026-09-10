@@ -31,6 +31,8 @@ var random := RandomNumberGenerator.new()
 var fragments: Dictionary = {}
 var fx_tweens: Array[Tween] = []
 var fx_paused: Array[Tween] = []
+var transient_root: Node3D
+var impact_tweens: Dictionary = {}
 
 func setup(simulation, cam: Camera3D) -> void:
 	authority = simulation
@@ -39,6 +41,9 @@ func setup(simulation, cam: Camera3D) -> void:
 	sound = Sound.new()
 	add_child(sound)
 	authority.feedback.connect(on_feedback)
+	transient_root = Node3D.new()
+	transient_root.name = "TransientEffects"
+	add_child(transient_root)
 	var layer := CanvasLayer.new()
 	layer.layer = 2
 	add_child(layer)
@@ -218,13 +223,15 @@ func animate(actor) -> void:
 
 func on_feedback(event: String, data: Dictionary) -> void:
 	match event:
+		"load_room":
+			clear_effects()
 		"tracer":
 			beam(data.from, data.to, data.color, 0.09)
 		"weapon_fire":
 			recoil = 0.48 if data.role == "shotgun" else 0.2
 			shake = 0.25 if data.role == "shotgun" else 0.06
 			hit_marker = 0.16 if data.hit else 0
-			sound.play("shotgun" if data.role == "shotgun" else ("arrow" if data.role == "archer" else "rifle"))
+			sound.play({"shotgun": "shotgun", "archer": "arrow", "mage": "fire", "storm": "storm"}.get(data.role, "rifle"))
 		"element_burst":
 			burst(data.at, data.color, 1.1)
 		"dash":
@@ -232,6 +239,7 @@ func on_feedback(event: String, data: Dictionary) -> void:
 			sound.play("swing", -4)
 		"fallen":
 			var actor = data.actor
+			stop_impact(actor)
 			if actor.animation != null: actor.animation.stop()
 			var tween := create_tween()
 			fx_tweens.append(tween)
@@ -241,10 +249,13 @@ func on_feedback(event: String, data: Dictionary) -> void:
 			tween.tween_callback(actor.hide)
 		"impact":
 			var actor = data.actor
+			stop_impact(actor)
 			actor.visual.rotation.z = random.randf_range(-0.1, 0.1)
 			var tween := create_tween()
 			fx_tweens.append(tween)
+			impact_tweens[actor.get_instance_id()] = tween
 			tween.tween_property(actor.visual, "rotation:z", 0.0, 0.12)
+			tween.tween_callback(func(): impact_tweens.erase(actor.get_instance_id()))
 		"milestone":
 			pulse = 0.35
 			sound.play("clear", -3)
@@ -258,7 +269,7 @@ func on_feedback(event: String, data: Dictionary) -> void:
 				hit_marker = 0.16
 		"hit":
 			burst(data.at, Color("ffac70") if data.dead else Color("9bf7d4"), 0.5 if data.dead else 0.16)
-			sound.play("hit", -6)
+			sound.play("kill" if data.dead else "hit", -6)
 		"possess":
 			pulse = 1.0
 			burst(data.at + Vector3.UP, Color("81ffcc"), 1.0)
@@ -315,11 +326,36 @@ func on_feedback(event: String, data: Dictionary) -> void:
 		"end":
 			sound.play("clear" if data.result == "CLEAR" else "dead", 1)
 
+func stop_impact(actor) -> void:
+	var id: int = actor.get_instance_id()
+	if impact_tweens.has(id):
+		impact_tweens[id].kill()
+		impact_tweens.erase(id)
+	actor.visual.rotation.z = 0.0
+
+func clear_effects() -> void:
+	for tween in fx_tweens:
+		if tween.is_valid(): tween.kill()
+	fx_tweens.clear()
+	fx_paused.clear()
+	impact_tweens.clear()
+	for effect in transient_root.get_children():
+		effect.queue_free()
+	for collection in [fragments, projectile_visuals]:
+		for effect in collection.values():
+			if is_instance_valid(effect): effect.queue_free()
+		collection.clear()
+	hit_marker = 0.0
+	pain = 0.0
+	shake = 0.0
+	recoil = 0.0
+	swing = 0.0
+
 func beam(from: Vector3, to: Vector3, color: Color, lifetime: float) -> void:
 	var distance := from.distance_to(to)
 	if distance < 0.01:
 		return
-	var line := Arena.box(self, Vector3(0.022, 0.022, distance), (from + to) * 0.5, Arena.material(color, 2))
+	var line := Arena.box(transient_root, Vector3(0.022, 0.022, distance), (from + to) * 0.5, Arena.material(color, 2))
 	line.look_at(to, Vector3.RIGHT if absf((to - from).normalized().y) > 0.98 else Vector3.UP)
 	var tween := create_tween()
 	fx_tweens.append(tween)
@@ -330,7 +366,7 @@ func burst(pos: Vector3, color: Color, size: float) -> void:
 	var mat := Arena.material(color, 1.5)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	var orb := Arena.sphere(self, 0.1, pos, mat)
+	var orb := Arena.sphere(transient_root, 0.1, pos, mat)
 	var tween := create_tween().set_parallel(true)
 	fx_tweens.append(tween)
 	tween.tween_property(orb, "scale", Vector3.ONE * size * 10.0, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

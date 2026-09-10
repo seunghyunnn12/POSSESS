@@ -4,6 +4,7 @@ var bank: Dictionary = {}
 var voices: Array[AudioStreamPlayer] = []
 var voice_index := 0
 var muted := false
+var next_hit_msec := 0
 
 func _ready() -> void:
 	for i in 12:
@@ -16,6 +17,9 @@ func _ready() -> void:
 	bank.shotgun = tone(0.23, 130, 30, 0.8)
 	bank.arrow = tone(0.16, 1100, 230, 0.15)
 	bank.hit = tone(0.055, 1400, 800, 0.4)
+	bank.kill = tone(0.15, 260, 55, 0.55)
+	bank.fire = tone(0.28, 90, 350, 0.72)
+	bank.storm = tone(0.16, 1700, 160, 0.6)
 	bank.possess = tone(0.75, 95, 1100, 0.13)
 	bank.inhabit = tone(0.28, 440, 220, 0.05)
 	bank.rejected = tone(0.25, 270, 50, 0.45)
@@ -51,6 +55,11 @@ func play(key: String, volume: float = 0.0) -> void:
 	# Headless accelerated QA has no listener and outpaces the audio mixer.
 	if muted or DisplayServer.get_name() == "headless" or not bank.has(key):
 		return
+	# A shotgun pellet or chain hit is not a separate full-volume voice.
+	if key == "hit":
+		var now := Time.get_ticks_msec()
+		if now < next_hit_msec: return
+		next_hit_msec = now + 45
 	var voice := voices[voice_index % voices.size()]
 	voice_index += 1
 	voice.stream = bank[key]
