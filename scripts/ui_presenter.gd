@@ -9,6 +9,7 @@ signal snapshot_changed(state: Dictionary)
 signal toast_requested(key: String)
 signal impact_requested
 var authority
+var ghost_progress
 var camera: Camera3D
 var details_key := ""
 var details: Dictionary = {}
@@ -50,6 +51,14 @@ func refresh() -> void:
 		"hazards": [], "travel": clampf(1 - absf(a.get("travel_left") - 0.6) / 0.6, 0, 1) if phase == "travel" else 0.0,
 		"journal": journal, "choices": [], "rerolls": a.get("rerolls") if a.get("rerolls") != null else -1,
 		"end_stats": tr("END_STATS") % [a.possession_count, a.kills, a.elapsed]}
+	state.ghost_selection = a.get("ghost_id") != null and not a.running
+	state.ghost_id = a.get("ghost_id") if a.get("ghost_id") != null else "wanderer"
+	state.ghost_unlocked = ghost_progress.unlocked.duplicate() if ghost_progress != null else ["wanderer"]
+	state.ghost_save_failed = ghost_progress != null and ghost_progress.save_error != OK
+	state.ghost_charge = a.get("ghost_charge") if a.get("ghost_charge") != null else 0.0
+	if not body and a.get("ghost_id") != null:
+		state.host = tr("GHOST_NAME_" + state.ghost_id.to_upper())
+		state.weapon = tr("GHOST_ATTACK_" + state.ghost_id.to_upper())
 	if modal == "":
 		if a.has_method("can_leave_room") and a.can_leave_room():
 			state.interaction = tr("DOOR_END" if index == total else "DOOR")
@@ -88,7 +97,7 @@ func refresh() -> void:
 						combo_text = tr("COMBO_READY") % Text.data(combo[0]) if a.rank_of(partner) > 0 else tr("COMBO_NEED") % [Text.data(combo[0]), Text.data(Augments.DEFINITIONS[partner].name)]
 			state.choices.append({"id": id, "name": Text.data(item.name), "tag": Text.data(item.tag), "description": Text.data(item.description), "effect": Text.effect(id, a.rank_of(id) + 1), "rank": a.rank_of(id) + 1, "combo": combo_text})
 	if modal == "pause":
-		var key := str([a.body_kind, a.body_profile, a.upgrades, a.state, a.decay, a.soul, a.get("relics"), a.get("quest_progress"), index, TranslationServer.get_locale()])
+		var key := str([a.body_kind, a.get("ghost_id"), a.body_profile, a.upgrades, a.state, a.decay, a.soul, a.get("relics"), a.get("quest_progress"), index, TranslationServer.get_locale()])
 		if key != details_key:
 			details_key = key
 			details = make_details(index)
@@ -113,6 +122,9 @@ func make_details(index: int) -> Dictionary:
 		"iv": tr("IV") % [(profile.get("attack_iv", 1) - 1) * 100, (profile.get("move_iv", 1) - 1) * 100, (profile.get("vitality_iv", 1) - 1) * 100],
 		"build": tr("BUILD") % tr("SEPARATOR").join(build) if not build.is_empty() else tr("EMPTY_BUILD"),
 		"route": "", "combos": "", "relics": "", "quest": "", "has_journal": a.get("plans") != null}
+	if profile.is_empty() and a.get("ghost_id") != null:
+		data.detail_name = tr("GHOST_NAME_" + a.ghost_id.to_upper())
+		data.trait = tr("GHOST_DESC_" + a.ghost_id.to_upper())
 	if a.get("plans") != null:
 		data.route = tr("ROUTE_TITLE") + "\n\n"
 		for i in range(1, 8):

@@ -128,9 +128,12 @@ func _process(dt: float) -> void:
 		for p in authority.projectiles:
 			ids[p.id] = true
 			if not projectile_visuals.has(p.id):
-				var color := Color("78dfff") if p.element == "ice" else (Color("ff8660") if p.element == "fire" else Color("c6a0ff"))
-				projectile_visuals[p.id] = Arena.box(self, Vector3(0.03, 0.03, 0.65), p.at, Arena.material(color, 0.6)) if p.element == "ice" else Arena.sphere(self, 0.16, p.at, Arena.material(color, 0.6))
+				var color := Color("82e2c3") if p.element == "soul" else (Color("78dfff") if p.element == "ice" else (Color("ff8660") if p.element == "fire" else Color("c6a0ff")))
+				projectile_visuals[p.id] = Arena.box(self, Vector3(0.03, 0.03, 0.65), p.at, Arena.material(color, 0.6)) if p.element == "ice" else Arena.sphere(self, maxf(0.16, p.get("radius", 0.0)), p.at, Arena.material(color, 0.6))
 			projectile_visuals[p.id].position = p.at
+			if p.element == "soul":
+				# Emerge from the hands before reaching full size; don't cover the aim.
+				projectile_visuals[p.id].scale = Vector3.ONE * clampf((4.0 - p.life) / 0.18, 0.08, 1.0)
 			if p.element == "ice":
 				projectile_visuals[p.id].look_at(p.at + p.velocity, Vector3.RIGHT if absf(p.velocity.normalized().y) > 0.98 else Vector3.UP)
 		for id in projectile_visuals.keys():

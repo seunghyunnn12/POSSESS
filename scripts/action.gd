@@ -1,5 +1,14 @@
 extends "res://scripts/campaign.gd"
 const Weapons = preload("res://scripts/weapons.gd")
+const Ghosts = preload("res://scripts/ghosts.gd")
+var ghost_id := "wanderer"
+var ghost_charge := 0.0
+var captured_roles: Dictionary = {}
+
+func select_ghost(id: String, unlocked: Array) -> bool:
+	if running or not is_multiplayer_authority() or id not in Ghosts.IDS or id not in unlocked: return false
+	ghost_id = id
+	return true
 var action_mode := true
 var projectiles: Array[Dictionary] = []
 var projectile_serial := 0
@@ -42,6 +51,7 @@ func resolve_flow() -> void:
 	super.resolve_flow()
 
 func finish(result: String) -> void:
+	if not is_multiplayer_authority(): return
 	var was_combat := phase == "combat"
 	super.finish(result)
 	if result == "CLEAR" and was_combat:
@@ -50,6 +60,7 @@ func finish(result: String) -> void:
 	if outcome != "":
 		focus_left = 0
 		Engine.time_scale = 1
+	if bosses_defeated > 0: feedback.emit("ghost_unlock", {"id": "reaper"})
 
 func choose_upgrade(index: int) -> void:
 	var valid := is_multiplayer_authority() and outcome == "" and not paused and not journal_open and index >= 0 and index < upgrade_choices.size()
@@ -78,6 +89,7 @@ func leave_room() -> void:
 	super.leave_room()
 
 func begin_travel() -> void:
+	ghost_charge = 0
 	carried = {"kind": body_kind, "profile": body_profile.duplicate(true), "decay": decay, "max": decay_max, "ammo": ammo, "state": state}
 	projectiles.clear()
 	focus_left = 0
@@ -131,6 +143,11 @@ func _physics_process(dt: float) -> void:
 				bow_charge = minf(1, bow_charge + dt / 0.75)
 			elif bow_charge > 0:
 				fire_arrow()
+		if state == State.Soul and ghost_id == "arcanist" and shot_left <= 0:
+			if intent.fire:
+				ghost_charge = minf(1, ghost_charge + dt / 0.8)
+			elif ghost_charge > 0:
+				ghost_charge = 0
 		tick_projectiles(dt)
 		for actor in actors:
 			if actor.alive and not actor.claimed:
@@ -168,6 +185,11 @@ func move_player(dt: float) -> void:
 
 func current_stats() -> Dictionary:
 	var stats := super.current_stats()
+	# During possession entry body_profile is already assigned before state flips.
+	if body_profile.is_empty():
+		# Scale the inherited 14-damage soul baseline, retaining curse and essence.
+		stats.damage *= Ghosts.info(ghost_id).damage / 14.0
+		stats.interval = Ghosts.info(ghost_id).interval
 	if state == State.Soul and focus_left > 0:
 		stats.move *= 2.5
 	return stats
@@ -183,13 +205,18 @@ func eject(explode: bool) -> void:
 func begin_possession(candidate) -> void:
 	super.begin_possession(candidate)
 	if state == State.Possessing:
+		ghost_charge = 0
 		focus_left = 0
 		Engine.time_scale = 1
 		projectiles = projectiles.filter(func(p): return p.get("source") != candidate)
 
 func finish_possession() -> void:
+	var in_combat := phase == "combat"
 	super.finish_possession()
 	if state == State.Body:
+		if in_combat:
+			captured_roles[body_kind] = true
+			if captured_roles.size() >= 3: feedback.emit("ghost_unlock", {"id": "arcanist"})
 		ammo = Weapons.info(body_kind).magazine
 		bow_charge = 0
 		heat = 0
@@ -206,7 +233,10 @@ func attack() -> void:
 		return
 	if not is_multiplayer_authority() or is_frozen() or phase == "rest" or outcome != "" or state not in [State.Soul, State.Body] or shot_left > 0 or reload_left > 0 or settle_left > 0:
 		return
-	if state == State.Soul or body_kind == "brute":
+	if state == State.Soul:
+		attack_ghost()
+		return
+	if body_kind == "brute":
 		super.attack()
 		return
 	if body_kind == "archer":
@@ -264,11 +294,55 @@ func fire_arrow() -> void:
 	shot_left = current_stats().interval
 	feedback.emit("weapon_fire", {"role": "archer", "hit": false})
 
-func launch(at: Vector3, velocity: Vector3, damage: float, element: String, friendly: bool, source = null) -> void:
+func attack_ghost() -> void:
+	if not is_multiplayer_authority() or not running or is_frozen() or state != State.Soul or outcome != "" or phase == "rest" or shot_left > 0 or settle_left > 0: return
+	var info := Ghosts.info(ghost_id)
+	if ghost_id == "arcanist" and ghost_charge < 1: return
+	ghost_charge = 0
+	shot_left = info.interval
+	var damage: float = current_stats().damage
+	if ghost_id in ["wanderer", "arcanist"]:
+		launch(eye(), forward() * info.speed, damage, "soul", true, null, info.radius)
+		feedback.emit("shot", {"from": eye(), "to": eye() + forward() * 0.4, "soul": true, "hit": false})
+	elif ghost_id == "reaper":
+		var hit := false
+		for actor in actors:
+			var at: Vector3 = actor.position + Vector3.UP
+			if actor.alive and not actor.claimed and eye().distance_to(at) <= 3.0 and forward().dot((at - eye()).normalized()) > 0.4 and ray(eye(), at, 1).is_empty():
+				damage_enemy(actor, damage)
+				hit = true
+		feedback.emit("swing", {"hit": hit})
+	else:
+		var hit := ray(eye(), eye() + forward() * 35)
+		var connected: bool = not hit.is_empty() and hit.collider is Actor
+		if connected: damage_enemy(hit.collider, damage)
+		feedback.emit("shot", {"from": eye(), "to": hit.position if not hit.is_empty() else eye() + forward() * 35, "soul": true, "hit": connected})
+
+func launch(at: Vector3, velocity: Vector3, damage: float, element: String, friendly: bool, source = null, radius: float = 0.0) -> void:
 	if projectiles.size() >= 80:
 		return
 	projectile_serial += 1
-	projectiles.append({"id": projectile_serial, "at": at, "velocity": velocity, "damage": damage, "element": element, "friendly": friendly, "source": source, "life": 4.0})
+	projectiles.append({"id": projectile_serial, "at": at, "velocity": velocity, "damage": damage, "element": element, "friendly": friendly, "source": source, "life": 4.0, "radius": radius})
+
+func projectile_hit(p: Dictionary, next: Vector3) -> Dictionary:
+	if p.get("radius", 0.0) <= 0: return ray(p.at, next, 5 if p.friendly else 3)
+	var query := PhysicsShapeQueryParameters3D.new()
+	var shape := SphereShape3D.new()
+	shape.radius = p.radius
+	query.shape = shape
+	query.collision_mask = 5
+	query.transform.origin = p.at
+	var space := player.get_world_3d().direct_space_state
+	var info := space.get_rest_info(query)
+	if info.is_empty():
+		query.motion = next - p.at
+		var fractions := space.cast_motion(query)
+		if fractions[0] >= 1: return {}
+		query.transform.origin = p.at + query.motion * fractions[1]
+		query.motion = Vector3.ZERO
+		info = space.get_rest_info(query)
+	if info.is_empty(): return ray(p.at, next, 5)
+	return {"collider": instance_from_id(info.collider_id), "position": info.point}
 
 func tick_projectiles(dt: float) -> void:
 	for i in range(projectiles.size() - 1, -1, -1):
@@ -276,7 +350,7 @@ func tick_projectiles(dt: float) -> void:
 			continue
 		var p: Dictionary = projectiles[i]
 		var next: Vector3 = p.at + p.velocity * dt
-		var hit := ray(p.at, next, 5 if p.friendly else 3)
+		var hit := projectile_hit(p, next)
 		p.life -= dt
 		if not hit.is_empty():
 			projectiles.remove_at(i)

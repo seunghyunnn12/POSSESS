@@ -17,6 +17,7 @@ func _draw() -> void:
 	draw_circle(center, 1.7, tint)
 	for axis in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]: draw_line(center + axis * 8, center + axis * 13, tint, 1.5, true)
 	if model.reachable: draw_arc(center, 23, -PI / 2, -PI / 2 + TAU * model.chance, 48, mint, 2, true)
+	if model.get("ghost_charge", 0.0) > 0: draw_arc(center, 30, -PI / 2, -PI / 2 + TAU * model.ghost_charge, 48, get_theme_color("purple", "Palette"), 3, true)
 	if model.target_hp >= 0:
 		draw_rect(Rect2(607, 398, 66, 3), get_theme_color("line", "Palette"))
 		draw_rect(Rect2(607, 398, 66 * model.target_hp, 3), tint)

@@ -8,6 +8,8 @@ const ActionHud = preload("res://scripts/action_hud.gd")
 const Presentation = preload("res://scripts/presentation.gd")
 const Hud = preload("res://scripts/hud.gd")
 const UiPresenter = preload("res://scripts/ui_presenter.gd")
+const GhostProgress = preload("res://scripts/ghost_progress.gd")
+var ghost_progress = GhostProgress.new()
 var ui_presenter
 var arena
 var authority
@@ -23,6 +25,8 @@ var action_run := true
 var suppress_fire := false
 
 func _ready() -> void:
+	# Script-driven QA must never unlock characters in the player's real profile.
+	ghost_progress.load_progress("" if "--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args() else "user://ghost_progress.cfg")
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--seed=") and argument.trim_prefix("--seed=").is_valid_int():
 			run_seed = int(argument.trim_prefix("--seed="))
@@ -51,6 +55,7 @@ func _ready() -> void:
 	authority.name = "authority"
 	add_child(authority)
 	authority.configure(player, arena.enemies)
+	if authority is Action: authority.select_ghost(ghost_progress.selected, ghost_progress.unlocked)
 	authority.yaw = aim.x
 	authority.pitch = aim.y
 	camera = Camera3D.new()
@@ -70,10 +75,12 @@ func _ready() -> void:
 	hud.choice_requested.connect(_choose_upgrade)
 	hud.continue_requested.connect(_continue)
 	hud.key_requested.connect(_ui_key)
+	hud.ghost_requested.connect(_select_ghost)
 	layer.add_child(hud)
 	ui_presenter = UiPresenter.new()
 	add_child(ui_presenter)
 	ui_presenter.setup(authority, camera)
+	ui_presenter.ghost_progress = ghost_progress
 	hud.bind(ui_presenter)
 	authority.feedback.connect(_feedback)
 	# QA can bypass the title, while normal play always starts deliberately.
@@ -84,6 +91,12 @@ func begin() -> void:
 	authority.paused = false
 	authority.start()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _select_ghost(id: String) -> void:
+	if authority is Action and authority.select_ghost(id, ghost_progress.unlocked):
+		ghost_progress.select(id)
+		ui_presenter.refresh()
+		if ghost_progress.save_error != OK: hud.show_toast("GHOST_SAVE_ERROR")
 
 func _ui_key(code: int) -> void:
 	var event := InputEventKey.new()
@@ -172,6 +185,13 @@ func _notification(what: int) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _feedback(event: String, data: Dictionary) -> void:
+	if authority is Action:
+		var unlocked_id: String = data.get("id", "") if event == "ghost_unlock" else ""
+		if event == "end" and data.get("result", "") == "CLEAR" and authority.room_index == authority.room_total:
+			unlocked_id = "gunslinger"
+		if unlocked_id != "" and ghost_progress.unlock(unlocked_id):
+			hud.show_toast("GHOST_UNLOCK_" + unlocked_id.to_upper())
+			if ghost_progress.save_error != OK: hud.show_toast("GHOST_SAVE_ERROR")
 	if event == "kick":
 		aim = Vector2(authority.yaw, authority.pitch)
 	if event == "load_room":

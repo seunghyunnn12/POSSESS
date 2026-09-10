@@ -1,4 +1,4 @@
-# 0.6 UI 아트 슬롯 / 2D 제작 브리프
+# 0.7 UI 아트 슬롯 / 2D 제작 브리프
 
 1280×720 기준. 모든 슬롯은 **텍스처가 없는 TextureRect**이며 KEEP_ASPECT_CENTERED로 중앙 정렬한다. 프레임·문구·막대는 UI가 그리므로 그림에 포함하지 않는다. 현재 아트 제작은 범위 밖이다.
 
@@ -12,8 +12,11 @@
 | 상호작용 아이콘 | hud / Interaction/Icon | 28×28 | 1:1 | `icons/interact.png` |
 | 현재 무기 아이콘 | hud / Weapon/Icon | 48×48 | 1:1 | `weapons/{role}.png` |
 | 증강 카드 그림 ×3 | augment / Card0..2/Art | 336×112 | 3:1 | `augments/{id}.png` |
+| 시작 유령 초상 ×4 | title / GhostSelection/{ghost}/Portrait | 60×66 | 10:11 | `portraits/{ghost}.png` |
 
 `role`: `soul`, `soldier`, `brute`, `shotgun`, `archer`, `mage`, `storm`. 몸 초상은 같은 원본을 두 슬롯에서 비율 유지하여 사용한다. **권장 원본은 556×716**, 얼굴·가슴 중심 실루엣을 중앙 80%에 두면 작은 HUD에서도 잘리지 않는다.
+
+`ghost`: `wanderer`, `reaper`, `arcanist`, `gunslinger`. 유령 상태의 HUD·정보창 초상과 무기 슬롯도 각각 `portraits/{ghost}.png`, `weapons/{ghost}.png`를 사용한다. 시작 전에는 키아트 영역 대신 유령 선택 목록을 표시한다. 기존 `soul` 슬롯은 이전 규칙의 테스트 장면을 위한 예비 경로다.
 
 `id`: `ambush`, `vigor`, `mercy`, `curse`, `rot`, `funeral`. 카드 원본은 1008×336 권장. 이름·수치·희귀도 테두리를 굽지 않는다.
 

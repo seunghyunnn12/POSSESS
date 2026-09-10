@@ -3,6 +3,8 @@ extends Control
 signal choice_requested(index: int)
 signal continue_requested
 signal key_requested(code: int)
+signal ghost_requested(id: String)
+const Ghosts = preload("res://scripts/ghosts.gd")
 const THEME = preload("res://theme/possess.tres")
 const Reticle = preload("res://scripts/ui_marks.gd")
 const Art = preload("res://scripts/ui_art.gd")
@@ -38,6 +40,9 @@ func _ready() -> void:
 		if model.get("outcome", "") != "": key_requested.emit(KEY_R)
 		else: continue_requested.emit())
 	screens.title.get_node("Skip").pressed.connect(func(): key_requested.emit(KEY_TAB))
+	for id in Ghosts.IDS:
+		screens.title.get_node("GhostSelection/" + id).pressed.connect(func(): ghost_requested.emit(id))
+		Art.bind(screens.title.get_node("GhostSelection/" + id + "/Portrait"), "portraits/" + id)
 	for i in 3:
 		screens.augment.get_node("Card" + str(i)).pressed.connect(func(): choice_requested.emit(i))
 	screens.augment.get_node("Reroll").pressed.connect(func(): key_requested.emit(KEY_R))
@@ -76,10 +81,12 @@ func present(state: Dictionary) -> void:
 	model = state
 	if last_locale != TranslationServer.get_locale(): localize()
 	var modal: String = state.modal
-	var next_art_key := str([state.kind, state.body, state.choices])
+	screens.title.get_node("GhostSelection").visible = state.get("ghost_selection", false)
+	screens.title.get_node("KeyArt").visible = not state.get("ghost_selection", false)
+	var next_art_key := str([state.kind, state.body, state.choices, state.get("ghost_id", "wanderer")])
 	if next_art_key != art_key:
 		art_key = next_art_key
-		var role: String = state.kind if state.body else "soul"
+		var role: String = state.kind if state.body else state.get("ghost_id", "soul")
 		Art.bind(screens.hud.get_node("Host/PortraitFrame/Portrait"), "portraits/" + role)
 		Art.bind(screens.pause.get_node("Body/Portrait"), "portraits/" + role)
 		Art.bind(screens.hud.get_node("Weapon/Icon"), "weapons/" + role)
@@ -91,11 +98,21 @@ func present(state: Dictionary) -> void:
 	marks.model = state
 	for pair in [["Stage/Name", "stage"], ["Enemies/Count", "enemies"], ["Host/Name", "host"], ["Host/Life", "life"], ["Weapon/Name", "weapon"], ["Weapon/Ammo", "ammo"], ["SoulLabel", "soul"], ["Interaction/Text", "interaction"]]: put("hud", pair[0], state[pair[1]])
 	screens.hud.get_node("Host/LifeBar").value = state.life_fraction * 100
+	put("hud", "Host/Caption", tr("HOST" if state.body else "GHOST_BASE"))
 	screens.hud.get_node("SoulBar").value = state.xp * 100
 	screens.hud.get_node("Weapon/Reload").value = state.reload * 100
 	screens.hud.get_node("Interaction").visible = state.interaction != ""
 	screens.hud.get_node("Interaction/Hold").value = state.hold * 100
 	if modal == "title":
+		put("title", "Footer", tr("GHOST_SAVE_ERROR" if state.get("ghost_save_failed", false) else "FOOTER"))
+		put("title", "GhostSelection/Heading", tr("GHOST_SELECT"))
+		put("title", "GhostSelection/Description", tr("GHOST_DESC_" + state.ghost_id.to_upper()))
+		for id in Ghosts.IDS:
+			var button = screens.title.get_node("GhostSelection/" + id)
+			button.disabled = id not in state.ghost_unlocked
+			button.theme_type_variation = "ActiveTab" if id == state.ghost_id else "Button"
+			put("title", "GhostSelection/" + id + "/Name", tr("GHOST_NAME_" + id.to_upper()))
+			put("title", "GhostSelection/" + id + "/Condition", tr("GHOST_SELECTED" if id == state.ghost_id else ("GHOST_AVAILABLE" if id in state.ghost_unlocked else "GHOST_LOCK_" + id.to_upper())))
 		var briefing: bool = state.phase == "briefing" and state.running
 		var ended: bool = state.outcome != ""
 		put("title", "Logo", tr("END_WIN" if state.outcome == "CLEAR" else "END_LOSE") if ended else tr("BRIEF_TITLE" if briefing else "GAME_TITLE"))
