@@ -1,0 +1,55 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+PASS: new profile opens only default ghost
+PASS: locked and unknown IDs cannot be selected or unlocked
+PASS: first unlock also creates a recovery copy
+PASS: unlock and selected ghost save to disk across repeated writes
+PASS: another profile instance restores selection and unlocks
+PASS: repeated achievement cannot duplicate unlock
+PASS: stale profile saves preserve unlocks from another game window
+PASS: corrupt primary recovers unlocks from backup
+PASS: recovered profile can save again
+PASS: malformed IDs cannot unlock or select a ghost
+PASS: QA cannot modify the player's real unlock save
+PASS: title offers starting character selection
+PASS: locked ghost is visibly disabled
+PASS: input handler rejects locked character
+PASS: character button selects an unlocked starting ghost
+PASS: character cannot change during a run
+PASS: wanderer can weaken the tutorial target without killing it
+PASS: wanderer practice capture reaches exit without counting toward unlocks
+PASS: reaper can weaken the tutorial target without killing it
+PASS: reaper practice capture reaches exit without counting toward unlocks
+PASS: arcanist can weaken the tutorial target without killing it
+PASS: arcanist practice capture reaches exit without counting toward unlocks
+PASS: gunslinger can weaken the tutorial target without killing it
+PASS: gunslinger practice capture reaches exit without counting toward unlocks
+PASS: default ghost emits a traveling shot rather than instant damage
+PASS: default shot is slow and has a real wide collision radius
+PASS: distant enemy is not hit before slow projectile arrives
+PASS: multiple slow shots can coexist
+PASS: pause freezes ghost projectile flight
+PASS: sphere-swept ghost projectile damages its target on arrival
+PASS: large projectile edge hits even when center ray misses
+PASS: wide ghost projectile stops at walls without tunneling
+PASS: reaper strikes nearby enemies with a broad melee attack
+PASS: reaper cannot hit distant enemies
+PASS: reaper cannot strike through a wall
+PASS: arcanist must charge before firing
+PASS: pause freezes magic charge
+PASS: releasing early cancels magic charge
+PASS: full magic charge releases a stronger projectile
+PASS: possession cancels ghost charge
+PASS: possessed body uses its own weapon independently of starting ghost
+PASS: leaving a host restores the selected ghost's attack
+PASS: gunslinger deals weak accurate instant damage
+PASS: existing soul damage augment scales the chosen ghost
+PASS: surplus experience damage bonus still stacks with ghost damage augment
+PASS: non-authority cannot fire the selected ghost attack
+PASS: duplicate body types do not advance three-type unlock
+PASS: three different combat hosts unlock arcanist
+PASS: actual middle boss room clear unlocks reaper
+PASS: middle boss does not grant final-clear character
+PASS: actual final departure saves gunslinger unlock
+GHOST RESULT: 51 checks, 0 failures

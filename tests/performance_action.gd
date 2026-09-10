@@ -31,6 +31,11 @@ func run() -> void:
 	sim.body_kind = "mage"
 	sim.body_profile = preload("res://scripts/traits.gd").profile()
 	sim.decay_max = 28
+	var ghost_stress := "--ghost-stress" in OS.get_cmdline_user_args()
+	if ghost_stress:
+		sim.state = 0
+		sim.body_kind = ""
+		sim.body_profile.clear()
 	sim.start()
 	var start := Time.get_ticks_usec()
 	var previous := start
@@ -38,6 +43,7 @@ func run() -> void:
 	while Time.get_ticks_usec() - start < 18000000:
 		sim.paused = false
 		sim.decay = 28
+		if ghost_stress: sim.soul = 20
 		sim.invulnerable = 1
 		sim.disguised = false
 		var time := float(Time.get_ticks_msec()) * 0.001
@@ -54,6 +60,7 @@ func run() -> void:
 	var average := total / deltas.size()
 	var report := "GPU: %s\nScenario: 8 enemies including boss, terraces, fire/ice/lightning projectiles\nFrames: %d\nMean: %.2f ms (%.1f FPS)\np95: %.2f ms\np99: %.2f ms\nPeak active projectiles: %d\n" % [RenderingServer.get_video_adapter_name(), deltas.size(), average, 1000 / average, deltas[int(deltas.size() * 0.95)], deltas[int(deltas.size() * 0.99)], peak_projectiles]
 	print(report)
+	if ghost_stress: report += "Player: wanderer slow sphere projectiles, soul time held for measurement\n"
 	var file := FileAccess.open("res://qa-output/" + report_prefix + "-performance.txt", FileAccess.WRITE)
 	file.store_string(report)
 	file.close()
