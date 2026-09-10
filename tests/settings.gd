@@ -64,7 +64,8 @@ func run() -> void:
 	if DisplayServer.get_name() != "headless":
 		await process_frame
 		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("res://qa-output/v08-settings.png")
+		var prefix := "v09" if "--v09" in OS.get_cmdline_user_args() else "v08"
+		root.get_texture().get_image().save_png("res://qa-output/" + prefix + "-settings.png")
 		game._change_setting("fullscreen", true)
 		await process_frame
 		check(DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN and panel.fields.resolution.disabled, "fullscreen applies and window-size selector is disabled")

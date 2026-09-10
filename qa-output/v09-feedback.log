@@ -1,0 +1,11 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: repeat impact replaces competing rotation tween
+PASS: death cancels surviving hit reaction
+PASS: world effects have explicit transient ownership
+PASS: pause freezes live death and world effects
+PASS: room load clears paused tweens and fragment references
+PASS: room load removes transient world geometry
+PASS: element attacks use distinct audio waveforms
+PASS: kill has distinct confirmation sound
+FEEDBACK: 8 checks, 0 failures

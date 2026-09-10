@@ -1,4 +1,6 @@
 .godot/
+.build-tools/
+builds/
 *.tmp
 qa-output/
 docs/ui/possess-ui-mockups.html
