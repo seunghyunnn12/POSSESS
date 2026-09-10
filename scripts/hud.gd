@@ -40,6 +40,7 @@ func _ready() -> void:
 		if model.get("outcome", "") != "": key_requested.emit(KEY_R)
 		else: continue_requested.emit())
 	screens.title.get_node("Skip").pressed.connect(func(): key_requested.emit(KEY_TAB))
+	screens.title.get_node("SettingsButton").pressed.connect(func(): selected_tab = "Settings"; key_requested.emit(KEY_ESCAPE); update_tab())
 	for id in Ghosts.IDS:
 		screens.title.get_node("GhostSelection/" + id).pressed.connect(func(): ghost_requested.emit(id))
 		Art.bind(screens.title.get_node("GhostSelection/" + id + "/Portrait"), "portraits/" + id)
@@ -47,7 +48,7 @@ func _ready() -> void:
 		screens.augment.get_node("Card" + str(i)).pressed.connect(func(): choice_requested.emit(i))
 	screens.augment.get_node("Reroll").pressed.connect(func(): key_requested.emit(KEY_R))
 	screens.pause.get_node("Resume").pressed.connect(func(): key_requested.emit(KEY_ESCAPE))
-	for tab in ["Body", "Journal", "Controls"]:
+	for tab in ["Body", "Journal", "Controls", "Settings"]:
 		screens.pause.get_node(tab + "Tab").pressed.connect(func(): selected_tab = tab; update_tab())
 	for id in screens: screens[id].hide()
 	Art.bind(screens.title.get_node("KeyArt"), "key_art/title")
@@ -64,6 +65,8 @@ func bind(presenter: Node) -> void:
 
 func localize() -> void:
 	last_locale = TranslationServer.get_locale()
+	put("title", "SettingsButton", tr("TAB_SETTINGS"))
+	put("pause", "SettingsTab", tr("TAB_SETTINGS"))
 	var labels := {"hud": {"Stage/Caption": "STAGE", "Enemies/Caption": "ENEMIES", "Host/Caption": "HOST"}, "title": {"Logo": "GAME_TITLE", "Eyebrow": "TITLE_EYEBROW", "Subtitle": "TITLE_SUB", "Description": "TITLE_DESC", "Continue": "START", "Skip": "SKIP", "Footer": "FOOTER"}, "augment": {"Eyebrow": "AUG_EYEBROW", "Title": "AUG_TITLE", "Subtitle": "AUG_SUB", "Footer": "AUG_FOOTER"}, "pause": {"Eyebrow": "PAUSE_EYEBROW", "Title": "PAUSE_TITLE", "Resume": "RESUME", "BodyTab": "TAB_BODY", "JournalTab": "TAB_JOURNAL", "ControlsTab": "TAB_CONTROLS", "Controls/Keys": "CONTROLS"}}
 	for screen in labels:
 		for path in labels[screen]: put(screen, path, tr(labels[screen][path]))
@@ -143,7 +146,8 @@ func present(state: Dictionary) -> void:
 		update_tab()
 
 func update_tab() -> void:
-	for tab in ["Body", "Journal", "Controls"]:
+	put("pause", "Title", tr("TAB_SETTINGS" if selected_tab == "Settings" else "PAUSE_TITLE"))
+	for tab in ["Body", "Journal", "Controls", "Settings"]:
 		screens.pause.get_node(tab).visible = tab == selected_tab
 		screens.pause.get_node(tab + "Tab").theme_type_variation = "ActiveTab" if tab == selected_tab else "Button"
 

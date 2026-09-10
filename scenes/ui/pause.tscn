@@ -1,8 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Theme" path="res://theme/possess.tres" id="1"]
 
 [ext_resource type="Script" path="res://scripts/ui_frame.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/settings_panel.gd" id="3"]
 
 [node name="Pause" type="Control"]
 layout_mode = 0
@@ -382,3 +383,16 @@ offset_bottom = 634.0
 mouse_filter = 2
 theme_type_variation = &"Subheading"
 text = ""
+
+[node name="SettingsTab" type="Button" parent="."]
+action_mode = 0
+layout_mode = 0
+offset_left = 633.0
+offset_top = 137.0
+offset_right = 818.0
+offset_bottom = 179.0
+
+[node name="Settings" type="Control" parent="."]
+layout_mode = 0
+mouse_filter = 2
+script = ExtResource("3")

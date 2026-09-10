@@ -5,6 +5,10 @@ var voices: Array[AudioStreamPlayer] = []
 var voice_index := 0
 var muted := false
 var next_hit_msec := 0
+var master_gain := 0.8:
+	set(value):
+		master_gain = clampf(value, 0.0, 1.0)
+		for voice in voices: voice.volume_db = linear_to_db(master_gain) - 13.0
 
 func _ready() -> void:
 	for i in 12:
@@ -63,7 +67,7 @@ func play(key: String, volume: float = 0.0) -> void:
 	var voice := voices[voice_index % voices.size()]
 	voice_index += 1
 	voice.stream = bank[key]
-	voice.volume_db = -13.0 + volume
+	voice.volume_db = -13.0 + volume + linear_to_db(master_gain)
 	voice.play()
 
 func _exit_tree() -> void:

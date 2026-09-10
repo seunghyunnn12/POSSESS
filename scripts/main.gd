@@ -9,6 +9,8 @@ const Presentation = preload("res://scripts/presentation.gd")
 const Hud = preload("res://scripts/hud.gd")
 const UiPresenter = preload("res://scripts/ui_presenter.gd")
 const GhostProgress = preload("res://scripts/ghost_progress.gd")
+const Settings = preload("res://scripts/settings.gd")
+var settings = Settings.new()
 var ghost_progress = GhostProgress.new()
 var ui_presenter
 var arena
@@ -27,6 +29,8 @@ var suppress_fire := false
 func _ready() -> void:
 	# Script-driven QA must never unlock characters in the player's real profile.
 	ghost_progress.load_progress("" if "--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args() else "user://ghost_progress.cfg")
+	settings.load_preferences("" if "--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args() else "user://settings.cfg")
+	if not settings.path.is_empty(): settings.apply_display()
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--seed=") and argument.trim_prefix("--seed=").is_valid_int():
 			run_seed = int(argument.trim_prefix("--seed="))
@@ -82,6 +86,9 @@ func _ready() -> void:
 	ui_presenter.setup(authority, camera)
 	ui_presenter.ghost_progress = ghost_progress
 	hud.bind(ui_presenter)
+	hud.screens.pause.get_node("Settings").changed.connect(_change_setting)
+	hud.screens.pause.get_node("Settings").reset_requested.connect(_reset_settings)
+	_apply_settings()
 	authority.feedback.connect(_feedback)
 	# QA can bypass the title, while normal play always starts deliberately.
 	if "--play" in OS.get_cmdline_user_args():
@@ -91,6 +98,23 @@ func begin() -> void:
 	authority.paused = false
 	authority.start()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _change_setting(key: String, value: Variant) -> void:
+	settings.set_value(key, value)
+	settings.save()
+	_apply_settings()
+	if key in ["fullscreen", "resolution", "vsync"]: settings.apply_display()
+
+func _reset_settings() -> void:
+	settings.values = Settings.DEFAULTS.duplicate()
+	settings.save()
+	_apply_settings()
+	settings.apply_display()
+
+func _apply_settings() -> void:
+	presentation.sound.master_gain = settings.values.volume / 100.0
+	presentation.sound.muted = false
+	hud.screens.pause.get_node("Settings").present(settings.values, settings.save_error != OK)
 
 func _select_ghost(id: String) -> void:
 	if authority is Action and authority.select_ghost(id, ghost_progress.unlocked):
@@ -173,8 +197,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				presentation.sound.muted = not presentation.sound.muted
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		if event is InputEventMouseMotion and authority.outcome == "" and not authority.is_frozen():
-			aim.x = wrapf(aim.x - event.relative.x * 0.0021, -PI, PI)
-			aim.y = clampf(aim.y - event.relative.y * 0.0021, -1.38, 1.38)
+			aim.x = wrapf(aim.x - event.relative.x * 0.0021 * settings.values.sensitivity, -PI, PI)
+			aim.y = clampf(aim.y - event.relative.y * 0.0021 * settings.values.sensitivity * (-1.0 if settings.values.invert_y else 1.0), -1.38, 1.38)
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
 			authority.request("possess")
 

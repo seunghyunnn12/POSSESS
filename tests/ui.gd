@@ -6,7 +6,7 @@ func capture(label: String) -> void:
 	await process_frame
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
-		var prefix := "v07" if "--v07" in OS.get_cmdline_user_args() else "v06"
+		var prefix := "v08" if "--v08" in OS.get_cmdline_user_args() else ("v07" if "--v07" in OS.get_cmdline_user_args() else "v06")
 		root.get_texture().get_image().save_png("res://qa-output/" + prefix + "-" + label + ".png")
 
 func run() -> void:
@@ -21,6 +21,8 @@ func run() -> void:
 	check(game.hud.screens.size() == 4, "four retained Control scenes loaded")
 	check(game.hud.screens.title.visible, "title is the only initial screen")
 	var slots: Array[Node] = game.hud.find_children("*", "TextureRect", true, false)
+	# OptionButton's internal popup has engine-owned TextureRects, not art slots.
+	slots = slots.filter(func(slot): return slot.owner != null)
 	check(slots.size() == 14 and slots.all(func(slot): return slot.texture == null), "fourteen art placeholders remain empty and ready for replacement")
 	var shared: Theme = load("res://theme/possess.tres")
 	for screen in game.hud.screens.values():

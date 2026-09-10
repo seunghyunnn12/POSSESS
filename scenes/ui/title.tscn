@@ -279,3 +279,11 @@ offset_bottom = 650.0
 mouse_filter = 2
 theme_type_variation = &"Muted"
 autowrap_mode = 2
+
+[node name="SettingsButton" type="Button" parent="."]
+action_mode = 0
+layout_mode = 0
+offset_left = 548.0
+offset_top = 570.0
+offset_right = 690.0
+offset_bottom = 618.0
