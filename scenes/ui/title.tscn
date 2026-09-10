@@ -287,3 +287,11 @@ offset_left = 548.0
 offset_top = 570.0
 offset_right = 690.0
 offset_bottom = 618.0
+
+[node name="RecordsButton" type="Button" parent="."]
+action_mode = 0
+layout_mode = 0
+offset_left = 548.0
+offset_top = 494.0
+offset_right = 690.0
+offset_bottom = 556.0

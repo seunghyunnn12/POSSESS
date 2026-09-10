@@ -20,6 +20,8 @@ var selected_tab := "Body"
 var was_journal := false
 var last_locale := ""
 var art_key := ""
+var bindings
+var records
 
 func _ready() -> void:
 	theme = THEME
@@ -41,6 +43,7 @@ func _ready() -> void:
 		else: continue_requested.emit())
 	screens.title.get_node("Skip").pressed.connect(func(): key_requested.emit(KEY_TAB))
 	screens.title.get_node("SettingsButton").pressed.connect(func(): selected_tab = "Settings"; key_requested.emit(KEY_ESCAPE); update_tab())
+	screens.title.get_node("RecordsButton").pressed.connect(func(): selected_tab = "Records"; key_requested.emit(KEY_ESCAPE); update_tab())
 	for id in Ghosts.IDS:
 		screens.title.get_node("GhostSelection/" + id).pressed.connect(func(): ghost_requested.emit(id))
 		Art.bind(screens.title.get_node("GhostSelection/" + id + "/Portrait"), "portraits/" + id)
@@ -48,7 +51,7 @@ func _ready() -> void:
 		screens.augment.get_node("Card" + str(i)).pressed.connect(func(): choice_requested.emit(i))
 	screens.augment.get_node("Reroll").pressed.connect(func(): key_requested.emit(KEY_R))
 	screens.pause.get_node("Resume").pressed.connect(func(): key_requested.emit(KEY_ESCAPE))
-	for tab in ["Body", "Journal", "Controls", "Settings"]:
+	for tab in ["Body", "Journal", "Controls", "Settings", "Records"]:
 		screens.pause.get_node(tab + "Tab").pressed.connect(func(): selected_tab = tab; update_tab())
 	for id in screens: screens[id].hide()
 	Art.bind(screens.title.get_node("KeyArt"), "key_art/title")
@@ -67,6 +70,8 @@ func localize() -> void:
 	last_locale = TranslationServer.get_locale()
 	put("title", "SettingsButton", tr("TAB_SETTINGS"))
 	put("pause", "SettingsTab", tr("TAB_SETTINGS"))
+	put("title", "RecordsButton", tr("TAB_RECORDS"))
+	put("pause", "RecordsTab", tr("TAB_RECORDS"))
 	var labels := {"hud": {"Stage/Caption": "STAGE", "Enemies/Caption": "ENEMIES", "Host/Caption": "HOST"}, "title": {"Logo": "GAME_TITLE", "Eyebrow": "TITLE_EYEBROW", "Subtitle": "TITLE_SUB", "Description": "TITLE_DESC", "Continue": "START", "Skip": "SKIP", "Footer": "FOOTER"}, "augment": {"Eyebrow": "AUG_EYEBROW", "Title": "AUG_TITLE", "Subtitle": "AUG_SUB", "Footer": "AUG_FOOTER"}, "pause": {"Eyebrow": "PAUSE_EYEBROW", "Title": "PAUSE_TITLE", "Resume": "RESUME", "BodyTab": "TAB_BODY", "JournalTab": "TAB_JOURNAL", "ControlsTab": "TAB_CONTROLS", "Controls/Keys": "CONTROLS"}}
 	for screen in labels:
 		for path in labels[screen]: put(screen, path, tr(labels[screen][path]))
@@ -75,6 +80,8 @@ func localize() -> void:
 	if toast_key != "": put("hud", "Toast/Message", tr(toast_key))
 
 func put(screen: String, path: String, value: String) -> void:
+	if bindings != null and ((screen == "hud" and path == "Interaction/Text") or path == "Controls/Keys"):
+		value = bindings.hint(value)
 	var node = screens[screen].get_node(path)
 	if node.text != value: node.text = value
 
@@ -146,8 +153,11 @@ func present(state: Dictionary) -> void:
 		update_tab()
 
 func update_tab() -> void:
-	put("pause", "Title", tr("TAB_SETTINGS" if selected_tab == "Settings" else "PAUSE_TITLE"))
-	for tab in ["Body", "Journal", "Controls", "Settings"]:
+	put("pause", "Title", tr("TAB_" + selected_tab.to_upper() if selected_tab in ["Settings", "Records", "Controls"] else "PAUSE_TITLE"))
+	if records != null:
+		put("pause", "Records/List", records.summary())
+		put("pause", "Records/Note", tr("RECORD_SAVE_ERROR" if records.save_error != OK else "RECORD_NOTE"))
+	for tab in ["Body", "Journal", "Controls", "Settings", "Records"]:
 		screens.pause.get_node(tab).visible = tab == selected_tab
 		screens.pause.get_node(tab + "Tab").theme_type_variation = "ActiveTab" if tab == selected_tab else "Button"
 

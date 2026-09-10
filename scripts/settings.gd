@@ -5,10 +5,12 @@ const RESOLUTIONS = [Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 10
 var values: Dictionary = DEFAULTS.duplicate()
 var path := ""
 var save_error := OK
+var bindings = preload("res://scripts/bindings.gd").new()
 
 func load_preferences(location: String) -> void:
 	path = location
 	values = DEFAULTS.duplicate()
+	bindings.restore({})
 	if path.is_empty(): return
 	var config := ConfigFile.new()
 	if config.load(path) != OK or not config.has_section("settings"):
@@ -16,6 +18,7 @@ func load_preferences(location: String) -> void:
 		if config.load(path + ".bak") != OK or not config.has_section("settings"): return
 	for key in DEFAULTS:
 		set_value(key, config.get_value("settings", key, DEFAULTS[key]))
+	bindings.restore(config.get_value("settings", "bindings", {}))
 
 func set_value(key: String, value: Variant) -> void:
 	if not DEFAULTS.has(key): return
@@ -33,6 +36,7 @@ func save() -> void:
 	if path.is_empty(): return
 	var config := ConfigFile.new()
 	for key in DEFAULTS: config.set_value("settings", key, values[key])
+	config.set_value("settings", "bindings", bindings.keys)
 	save_error = config.save(path + ".tmp")
 	if save_error != OK: return
 	var previous := ConfigFile.new()

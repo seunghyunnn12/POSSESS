@@ -396,3 +396,33 @@ offset_bottom = 179.0
 layout_mode = 0
 mouse_filter = 2
 script = ExtResource("3")
+
+[node name="RecordsTab" type="Button" parent="."]
+action_mode = 0
+layout_mode = 0
+offset_left = 828.0
+offset_top = 137.0
+offset_right = 1013.0
+offset_bottom = 179.0
+
+[node name="Records" type="Control" parent="."]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="List" type="Label" parent="Records"]
+layout_mode = 0
+offset_left = 66.0
+offset_top = 215.0
+offset_right = 1210.0
+offset_bottom = 615.0
+mouse_filter = 2
+
+[node name="Note" type="Label" parent="Records"]
+layout_mode = 0
+offset_left = 66.0
+offset_top = 640.0
+offset_right = 1210.0
+offset_bottom = 700.0
+mouse_filter = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 2

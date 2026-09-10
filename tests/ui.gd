@@ -6,7 +6,7 @@ func capture(label: String) -> void:
 	await process_frame
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
-		var prefix := "v08" if "--v08" in OS.get_cmdline_user_args() else ("v07" if "--v07" in OS.get_cmdline_user_args() else "v06")
+		var prefix := "v09" if "--v09" in OS.get_cmdline_user_args() else ("v08" if "--v08" in OS.get_cmdline_user_args() else ("v07" if "--v07" in OS.get_cmdline_user_args() else "v06"))
 		root.get_texture().get_image().save_png("res://qa-output/" + prefix + "-" + label + ".png")
 
 func run() -> void:

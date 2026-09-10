@@ -11,6 +11,8 @@ const UiPresenter = preload("res://scripts/ui_presenter.gd")
 const GhostProgress = preload("res://scripts/ghost_progress.gd")
 const Settings = preload("res://scripts/settings.gd")
 var settings = Settings.new()
+var records = preload("res://scripts/run_records.gd").new()
+var run_recorded := false
 var ghost_progress = GhostProgress.new()
 var ui_presenter
 var arena
@@ -31,6 +33,7 @@ func _ready() -> void:
 	ghost_progress.load_progress("" if "--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args() else "user://ghost_progress.cfg")
 	settings.load_preferences("" if "--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args() else "user://settings.cfg")
 	if not settings.path.is_empty(): settings.apply_display()
+	records.load_records("" if settings.path.is_empty() else "user://run_records.cfg")
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--seed=") and argument.trim_prefix("--seed=").is_valid_int():
 			run_seed = int(argument.trim_prefix("--seed="))
@@ -86,6 +89,14 @@ func _ready() -> void:
 	ui_presenter.setup(authority, camera)
 	ui_presenter.ghost_progress = ghost_progress
 	hud.bind(ui_presenter)
+	hud.bindings = settings.bindings
+	hud.records = records
+	hud.screens.pause.get_node("Controls/Keys").hide()
+	var binding_panel = preload("res://scripts/bindings_panel.gd").new()
+	binding_panel.name = "Bindings"
+	hud.screens.pause.get_node("Controls").add_child(binding_panel)
+	binding_panel.requested.connect(_begin_binding)
+	binding_panel.reset_requested.connect(_reset_bindings)
 	hud.screens.pause.get_node("Settings").changed.connect(_change_setting)
 	hud.screens.pause.get_node("Settings").reset_requested.connect(_reset_settings)
 	_apply_settings()
@@ -115,6 +126,19 @@ func _apply_settings() -> void:
 	presentation.sound.master_gain = settings.values.volume / 100.0
 	presentation.sound.muted = false
 	hud.screens.pause.get_node("Settings").present(settings.values, settings.save_error != OK)
+	hud.screens.pause.get_node("Controls/Bindings").present(settings.bindings)
+
+func _begin_binding(action: String) -> void:
+	var panel = hud.screens.pause.get_node("Controls/Bindings")
+	panel.waiting = action
+	panel.present(settings.bindings)
+
+func _reset_bindings() -> void:
+	settings.bindings.restore({})
+	settings.save()
+	var panel = hud.screens.pause.get_node("Controls/Bindings")
+	panel.waiting = ""
+	panel.present(settings.bindings, "SETTING_SAVE_ERROR" if settings.save_error != OK else "BIND_HELP")
 
 func _select_ghost(id: String) -> void:
 	if authority is Action and authority.select_ghost(id, ghost_progress.unlocked):
@@ -137,16 +161,36 @@ func _physics_process(_dt: float) -> void:
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		authority.clear_input()
 		return
-	var move := Vector2(float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)), float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W)))
-	authority.submit_input(move, Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not suppress_fire, aim, Input.is_physical_key_pressed(KEY_F))
+	var move := Vector2(float(settings.bindings.pressed("right")) - float(settings.bindings.pressed("left")), float(settings.bindings.pressed("back")) - float(settings.bindings.pressed("forward")))
+	authority.submit_input(move, Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not suppress_fire, aim, settings.bindings.pressed("interact"))
 
 func _input(event: InputEvent) -> void:
+	var panel = hud.screens.pause.get_node("Controls/Bindings")
+	if not panel.waiting.is_empty():
+		if not panel.is_visible_in_tree():
+			panel.waiting = ""
+		else:
+			if event is InputEventKey and event.pressed and not event.echo:
+				var notice := "BIND_HELP"
+				if event.physical_keycode == KEY_ESCAPE:
+					panel.waiting = ""
+				elif settings.bindings.assign_key(panel.waiting, event.physical_keycode):
+					settings.save()
+					panel.waiting = ""
+					if settings.save_error != OK: notice = "SETTING_SAVE_ERROR"
+				else: notice = "BIND_CONFLICT"
+				panel.present(settings.bindings, notice)
+			get_viewport().set_input_as_handled()
+			return
 	# Preserve the existing title shortcut before Control focus navigation uses Tab.
 	if authority != null and not authority.running and not authority.paused and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_TAB:
 		_unhandled_input(event)
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and authority.running and not authority.is_frozen() and authority.outcome == "" and authority.upgrade_choices.is_empty():
+		event = event.duplicate()
+		event.physical_keycode = settings.bindings.canonical(event.physical_keycode)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if authority is Campaign and event.physical_keycode == KEY_R and not authority.upgrade_choices.is_empty():
 			authority.reroll_upgrades()
@@ -209,6 +253,10 @@ func _notification(what: int) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _feedback(event: String, data: Dictionary) -> void:
+	if event == "end" and authority is Action and authority.room_index > 0 and not authority.outcome.is_empty() and not run_recorded:
+		run_recorded = true
+		records.record(authority)
+		if records.save_error != OK: hud.show_toast("RECORD_SAVE_ERROR")
 	if authority is Action:
 		var unlocked_id: String = data.get("id", "") if event == "ghost_unlock" else ""
 		if event == "end" and data.get("result", "") == "CLEAR" and authority.room_index == authority.room_total:
