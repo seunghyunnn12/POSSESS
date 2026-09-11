@@ -67,6 +67,7 @@ func _ready() -> void:
 	else:
 		rolls.seed = run_seed
 	build_room()
+	build_landmarks()
 	if not encounter.is_empty():
 		spawn_encounter(encounter)
 		if encounter.get("secret", false):
@@ -88,6 +89,29 @@ func _ready() -> void:
 	spawn("soldier", Vector3(-8, 0.05, -8), 4.0, "seer")
 	spawn("brute", Vector3(3, 0.05, -4), 2.5)
 	spawn("brute", Vector3(-4, 0.05, -12), 3.5, "preserved")
+
+func build_landmarks() -> void:
+	# Wall-mounted ornaments stay above traversal and possession sight lines.
+	var boss: String = encounter.get("boss", "")
+	var cloth := material(Color("533044") if boss != "" else Color("214654"))
+	for side in [-1, 1]:
+		for z in [-11, 6]:
+			box(self, Vector3(0.08, 1.8, 1.3), Vector3(side * 14.35, 5.4, z), cloth)
+			box(self, Vector3(0.13, 0.08, 1.6), Vector3(side * 14.30, 6.35, z), brass)
+	if boss != "":
+		var bell := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.42
+		mesh.bottom_radius = 0.85
+		mesh.height = 1.1
+		bell.mesh = mesh
+		bell.material_override = brass
+		bell.position = Vector3(0, 6.8, -17.8)
+		add_child(bell)
+		box(self, Vector3(0.07, 0.6, 0.07), Vector3(0, 7.65, -17.8), brass)
+		if boss == "sovereign":
+			for x in [-4.7, 4.7]:
+				box(self, Vector3(0.12, 5.5, 0.12), Vector3(x, 3.7, -19.7), mint)
 
 func build_room() -> void:
 	if layout == "gallery":

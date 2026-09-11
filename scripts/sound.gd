@@ -34,6 +34,22 @@ func _ready() -> void:
 	bank.loaded = tone(0.10, 850, 450, 0.35)
 	bank.clear = tone(0.7, 330, 660, 0.0)
 	bank.dead = tone(0.7, 150, 30, 0.12)
+	bank.door = tone(0.65, 75, 30, 0.5)
+	bank.bell = bell_tone()
+
+func bell_tone() -> AudioStreamWAV:
+	var data := PackedByteArray()
+	var rate := 22050
+	data.resize(rate * 2 * 2)
+	for i in rate * 2:
+		var t := float(i) / rate
+		var value := (sin(TAU * 110 * t) + 0.4 * sin(TAU * 277 * t) + 0.2 * sin(TAU * 463 * t)) * exp(-t * 3) * minf(t * 120, 1)
+		data.encode_s16(i * 2, int(clampf(value * 16000, -32767, 32767)))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = rate
+	stream.data = data
+	return stream
 
 func tone(duration: float, start: float, end: float, noise: float) -> AudioStreamWAV:
 	var sample_rate := 22050

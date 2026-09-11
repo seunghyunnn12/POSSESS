@@ -22,6 +22,7 @@ var last_locale := ""
 var art_key := ""
 var bindings
 var records
+var passage
 
 func _ready() -> void:
 	theme = THEME
@@ -54,7 +55,9 @@ func _ready() -> void:
 	for tab in ["Body", "Journal", "Controls", "Settings", "Records"]:
 		screens.pause.get_node(tab + "Tab").pressed.connect(func(): selected_tab = tab; update_tab())
 	for id in screens: screens[id].hide()
-	Art.bind(screens.title.get_node("KeyArt"), "key_art/title")
+	Art.bind(screens.title.get_node("KeyArt"), "illustrations/bell_gate")
+	passage = preload("res://scripts/passage.gd").new()
+	canvas.add_child(passage)
 	Art.bind(screens.hud.get_node("Stage/Icon"), "icons/stage")
 	Art.bind(screens.hud.get_node("Enemies/Icon"), "icons/enemy")
 	Art.bind(screens.hud.get_node("Interaction/Icon"), "icons/interact")
@@ -91,6 +94,8 @@ func present(state: Dictionary) -> void:
 	model = state
 	if last_locale != TranslationServer.get_locale(): localize()
 	var modal: String = state.modal
+	passage.visible = state.phase == "travel" and modal != "pause"
+	if passage.visible: passage.present(state.passage_index, bindings)
 	screens.title.get_node("GhostSelection").visible = state.get("ghost_selection", false)
 	screens.title.get_node("KeyArt").visible = not state.get("ghost_selection", false)
 	var next_art_key := str([state.kind, state.body, state.choices, state.get("ghost_id", "wanderer")])
@@ -114,6 +119,8 @@ func present(state: Dictionary) -> void:
 	screens.hud.get_node("Interaction").visible = state.interaction != ""
 	screens.hud.get_node("Interaction/Hold").value = state.hold * 100
 	if modal == "title":
+		put("title", "RecordsButton", tr("TAB_RECORDS"))
+		put("title", "SettingsButton", tr("TAB_SETTINGS"))
 		put("title", "Footer", tr("GHOST_SAVE_ERROR" if state.get("ghost_save_failed", false) else "FOOTER"))
 		put("title", "GhostSelection/Heading", tr("GHOST_SELECT"))
 		put("title", "GhostSelection/Description", tr("GHOST_DESC_" + state.ghost_id.to_upper()))
@@ -126,8 +133,8 @@ func present(state: Dictionary) -> void:
 		var briefing: bool = state.phase == "briefing" and state.running
 		var ended: bool = state.outcome != ""
 		put("title", "Logo", tr("END_WIN" if state.outcome == "CLEAR" else "END_LOSE") if ended else tr("BRIEF_TITLE" if briefing else "GAME_TITLE"))
-		put("title", "Subtitle", tr("END_SUB") if ended else (state.stage if briefing else tr("TITLE_SUB")))
-		put("title", "Description", state.end_stats if ended else tr("BRIEF_DESC" if briefing else "TITLE_DESC"))
+		put("title", "Subtitle", tr("STORY_END_WIN" if state.outcome == "CLEAR" else "STORY_END_LOSE") if ended else (tr("CHAPTER_%d" % maxi(1, state.chapter)) if briefing else tr("STORY_OPEN_TITLE")))
+		put("title", "Description", state.end_stats + "\n" + state.get("end_build", "") if ended else tr("STORY_BRIEF" if briefing else "STORY_OPEN"))
 		put("title", "Continue", tr("RESTART" if ended else ("READY" if briefing else "START")))
 		screens.title.get_node("Skip").visible = not briefing and not ended
 	if modal == "augment":
@@ -162,6 +169,8 @@ func update_tab() -> void:
 		screens.pause.get_node(tab + "Tab").theme_type_variation = "ActiveTab" if tab == selected_tab else "Button"
 
 func show_toast(key: String) -> void:
+	# Boss rewards arrive in the same frame; keep the seal's resolution readable.
+	if key == "TOAST_MILESTONE" and toast_key.begins_with("BOSS_CLEAR_") and toast_left > 0: return
 	toast_key = key
 	toast_left = 1.5
 	if is_node_ready(): put("hud", "Toast/Message", tr(key))

@@ -7,6 +7,7 @@ func capture(label: String) -> void:
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		var prefix := "v09" if "--v09" in OS.get_cmdline_user_args() else ("v08" if "--v08" in OS.get_cmdline_user_args() else ("v07" if "--v07" in OS.get_cmdline_user_args() else "v06"))
+		if "--v10" in OS.get_cmdline_user_args(): prefix = "v10"
 		root.get_texture().get_image().save_png("res://qa-output/" + prefix + "-" + label + ".png")
 
 func run() -> void:
@@ -23,7 +24,7 @@ func run() -> void:
 	var slots: Array[Node] = game.hud.find_children("*", "TextureRect", true, false)
 	# OptionButton's internal popup has engine-owned TextureRects, not art slots.
 	slots = slots.filter(func(slot): return slot.owner != null)
-	check(slots.size() == 14 and slots.all(func(slot): return slot.texture == null), "fourteen art placeholders remain empty and ready for replacement")
+	check(slots.size() == 14 and slots.filter(func(slot): return slot.texture == null).size() == 13, "thirteen art slots remain empty and title illustration is populated")
 	var shared: Theme = load("res://theme/possess.tres")
 	for screen in game.hud.screens.values():
 		check(screen.theme == shared, "%s uses the shared Theme" % screen.name)

@@ -43,7 +43,7 @@ offset_right = 1230.0
 offset_bottom = 680.0
 mouse_filter = 2
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 6
 
 [node name="Eyebrow" type="Label" parent="."]
 layout_mode = 0
@@ -70,17 +70,18 @@ layout_mode = 0
 offset_left = 64.0
 offset_top = 305.0
 offset_right = 684.0
-offset_bottom = 349.0
+offset_bottom = 369.0
 mouse_filter = 2
 theme_type_variation = &"Subheading"
 text = ""
+autowrap_mode = 2
 
 [node name="Description" type="Label" parent="."]
 layout_mode = 0
 offset_left = 64.0
 offset_top = 376.0
 offset_right = 654.0
-offset_bottom = 433.0
+offset_bottom = 478.0
 mouse_filter = 2
 theme_type_variation = &"Muted"
 text = ""

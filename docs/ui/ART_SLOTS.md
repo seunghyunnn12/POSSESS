@@ -1,10 +1,11 @@
-# 0.7 UI 아트 슬롯 / 2D 제작 브리프
+# 0.10 UI 아트 슬롯 / 2D 제작 브리프
 
-1280×720 기준. 모든 슬롯은 **텍스처가 없는 TextureRect**이며 KEEP_ASPECT_CENTERED로 중앙 정렬한다. 프레임·문구·막대는 UI가 그리므로 그림에 포함하지 않는다. 현재 아트 제작은 범위 밖이다.
+1280×720 기준. 초상화·무기·증강 등 기존 13개 슬롯은 비어 있다. 0.10에서 사용자가 승인한 이야기·전환 연출에 한해 지하 종문 삽화를 제작했다. 프레임·문구·막대는 UI가 그리므로 그림에 포함하지 않는다.
 
 | 용도 | 씬 / 노드 | 표시 크기(px) | 비율 | 자동 연결 경로 (`assets/ui/` 아래) |
 |---|---|---:|---:|---|
-| 타이틀 키아트 | title / KeyArt | 506×640 | 253:320 | `key_art/title.png` |
+| 출발·결과 삽화 | title / KeyArt | 506×640 | 253:320, COVERED | `illustrations/bell_gate.png` |
+| 구역 전환 삽화 | passage / illustration | 1280×720 | 16:9, COVERED | `illustrations/bell_gate.png` |
 | HUD 현재 몸 초상 | hud / Host/PortraitFrame/Portrait | 76×96 | 19:24 | `portraits/{role}.png` |
 | 정보창 몸 초상 | pause / Body/Portrait | 278×358 | 139:179 | `portraits/{role}.png` |
 | 구역 아이콘 | hud / Stage/Icon | 32×32 | 1:1 | `icons/stage.png` |

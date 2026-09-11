@@ -223,6 +223,12 @@ func animate(actor) -> void:
 
 func on_feedback(event: String, data: Dictionary) -> void:
 	match event:
+		"travel":
+			sound.play("door", -5)
+		"combat_start":
+			if authority.get("room_index") in [3, 7]: sound.play("bell", -3)
+		"room_clear":
+			if authority.get("room_index") in [3, 7]: sound.play("bell", -8)
 		"load_room":
 			clear_effects()
 		"tracer":

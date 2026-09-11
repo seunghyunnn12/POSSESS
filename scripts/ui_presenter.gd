@@ -56,6 +56,9 @@ func refresh() -> void:
 	state.ghost_unlocked = ghost_progress.unlocked.duplicate() if ghost_progress != null else ["wanderer"]
 	state.ghost_save_failed = ghost_progress != null and ghost_progress.save_error != OK
 	state.ghost_charge = a.get("ghost_charge") if a.get("ghost_charge") != null else 0.0
+	state.chapter = index
+	state.end_build = tr("STORY_BUILD") % [tr("GHOST_NAME_" + state.ghost_id.to_upper()), a.upgrades.size(), a.get("completed_combos").size() if a.get("completed_combos") != null else 0]
+	state.passage_index = index + (0 if a.get("room_loaded") == true else 1)
 	if not body and a.get("ghost_id") != null:
 		state.host = tr("GHOST_NAME_" + state.ghost_id.to_upper())
 		state.weapon = tr("GHOST_ATTACK_" + state.ghost_id.to_upper())
@@ -145,5 +148,9 @@ func on_feedback(event: String, data: Dictionary) -> void:
 	var messages := {"inhabit": "TOAST_INHABIT", "exposed": "TOAST_EXPOSED", "rejected": "TOAST_REJECTED", "unreachable": "TOAST_UNREACHABLE", "soul_focus": "TOAST_FOCUS", "supply": "TOAST_SUPPLY", "room_clear": "TOAST_CLEAR", "reinforcements": "TOAST_WAVE", "loaded": "TOAST_LOADED", "upgrade_chosen": "TOAST_UPGRADE", "milestone": "TOAST_MILESTONE", "element_notice": "TOAST_ELEMENT", "detection": "TOAST_DETECTION", "start": "TOAST_START", "combat_start": "TOAST_COMBAT", "level_ready": "TOAST_LEVEL", "boss_warning": "TOAST_BOSS"}
 	if event == "lesson":
 		toast_requested.emit(["TRAIN_MOVE", "TRAIN_WEAKEN", "TRAIN_POSSESS", "TRAIN_INSPECT", "TRAIN_SUPPLY", "TRAIN_ATTACK", "TRAIN_EJECT", "TRAIN_DOOR"][data.step])
+	elif event == "combat_start" and authority.get("room_index") in [3, 7]:
+		toast_requested.emit("BOSS_ENTER_%d" % authority.room_index)
+	elif event == "room_clear" and authority.get("room_index") in [3, 7]:
+		toast_requested.emit("BOSS_CLEAR_%d" % authority.room_index)
 	elif messages.has(event):
 		toast_requested.emit(messages[event])
