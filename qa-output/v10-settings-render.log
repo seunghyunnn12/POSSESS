@@ -1,0 +1,21 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+PASS: invalid preferences are clamped or rejected
+PASS: nonfinite sensitivity cannot poison camera input
+PASS: settings save creates primary and recovery copy
+PASS: settings survive a new preference instance
+PASS: repeated save replaces an existing preferences file
+PASS: invalid settings schema recovers from backup
+PASS: unwritable destination reports save failure
+PASS: QA leaves player device settings untouched
+PASS: title settings opens before starting a run
+PASS: sliders reach real sensitivity and audio preferences
+PASS: invert toggle reaches input preference
+PASS: mouse motion applies sensitivity and inversion
+PASS: settings pause cannot rotate the player
+PASS: fullscreen applies and window-size selector is disabled
+PASS: windowed mode restores the size selector
+PASS: vsync option reaches the display server
+PASS: restore defaults resets all device preferences
+SETTINGS: 17 checks, 0 failures

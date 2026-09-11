@@ -1,0 +1,45 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+PASS: four retained Control scenes loaded
+PASS: title is the only initial screen
+PASS: thirteen art slots remain empty and title illustration is populated
+PASS: HUD uses the shared Theme
+PASS: Title uses the shared Theme
+PASS: Augment uses the shared Theme
+PASS: Pause uses the shared Theme
+PASS: bundled TTF covers Hangul and Latin
+PASS: font license ships with TTF
+PASS: font never falls back to an installed system font
+PASS: English CSV column remains empty for translation handoff
+PASS: all authored characters have bundled glyphs
+PASS: empty English translation falls back to Korean
+PASS: live language switch updates existing Control text
+PASS: Korean can be restored without rebuilding scenes
+PASS: soldier model binding loads
+PASS: soldier animation bindings exist
+PASS: brute model binding loads
+PASS: brute animation bindings exist
+PASS: shotgun model binding loads
+PASS: shotgun animation bindings exist
+PASS: archer model binding loads
+PASS: archer animation bindings exist
+PASS: mage model binding loads
+PASS: mage animation bindings exist
+PASS: storm model binding loads
+PASS: storm animation bindings exist
+PASS: title button reaches existing start handler
+PASS: ordinary HUD has no persistent interaction instructions
+PASS: persistent HUD text is confined to four zones and soul bar
+PASS: toast replaces previous message with one 1.5 second line
+PASS: toast disappears after 1.5 seconds
+PASS: soul slow-motion does not extend toast beyond 1.5 real seconds
+PASS: door interaction and hold progress survive UI replacement
+PASS: upgrade modal hides combat HUD
+PASS: pause hides underlying cards and blocks click-through
+PASS: journal tab displays existing run data
+PASS: controls tab displays bindings
+PASS: resume button reaches existing pause input
+PASS: card button forwards choice without simulation access
+PASS: real Tab input skips practice even with a focused title button
+UI RESULT: 41 checks, 0 failures

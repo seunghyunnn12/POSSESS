@@ -1,5 +1,7 @@
 # Windows 플레이테스트 빌드
 
+최신 0.10: `./Build-Windows.ps1 -OutputDirectory builds/windows-v10`으로 기존 실행 파일을 덮지 않고 빌드한다. 배포 ZIP은 `builds/POSSESS-0.10-Windows.zip`이다. 아래 기본 출력 경로도 계속 지원한다.
+
 `builds/windows/POSSESS.exe`와 같은 폴더의 `POSSESS.pck`가 실제 배포물이다. 편집기 없이 실행된다. ZIP을 풀고 EXE를 실행한다. 소스 저장소와 빌드 도구는 배포하지 않는다.
 
 ## 재현

@@ -1,0 +1,20 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: reserved and duplicate keys are rejected
+PASS: new interaction key replaces old key
+PASS: context hints show rebound key
+PASS: binding map reload preserves valid assignments
+PASS: malformed map safely restores defaults
+PASS: key capture updates map while keeping game paused
+PASS: Escape cancels capture without resuming
+PASS: bindings survive settings file reload
+PASS: rebound eject key reaches authority intent
+PASS: old eject key no longer submits intent
+PASS: QA records do not touch player profile
+PASS: room clear never writes a completed run
+PASS: terminal run writes only once
+PASS: clear record survives disk reload
+PASS: invalid history schema recovers previous copy
+PASS: history is bounded to twenty completed runs
+PASS: history screen shows eight recent runs
+BINDINGS RECORDS: 17 checks, 0 failures
