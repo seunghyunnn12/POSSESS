@@ -140,7 +140,7 @@ func _physics_process(dt: float) -> void:
 		heat = maxf(0, heat - dt * 1.8)
 		if state == State.Body and body_kind == "archer":
 			if intent.fire:
-				bow_charge = minf(1, bow_charge + dt / 0.75)
+				bow_charge = minf(1, bow_charge + dt / (0.75 * [1.0, 0.6, 0.3][rank_of("quickdraw")]))
 			elif bow_charge > 0:
 				fire_arrow()
 		if state == State.Soul and ghost_id == "arcanist" and shot_left <= 0:
@@ -164,7 +164,7 @@ func _physics_process(dt: float) -> void:
 	var was_reload := reload_left > 0
 	super._physics_process(dt)
 	if was_reload and reload_left <= 0 and state == State.Body:
-		ammo = Weapons.info(body_kind).magazine
+		ammo = magazine_size()
 
 func move_player(dt: float) -> void:
 	if queued.get("dash", false) and dash_cooldown <= 0:
@@ -217,12 +217,12 @@ func finish_possession() -> void:
 		if in_combat:
 			captured_roles[body_kind] = true
 			if captured_roles.size() >= 3: feedback.emit("ghost_unlock", {"id": "arcanist"})
-		ammo = Weapons.info(body_kind).magazine
+		ammo = magazine_size()
 		bow_charge = 0
 		heat = 0
 
 func begin_reload() -> void:
-	if state == State.Body and Weapons.info(body_kind).magazine > 0 and ammo < Weapons.info(body_kind).magazine and reload_left <= 0:
+	if state == State.Body and magazine_size() > 0 and ammo < magazine_size() and reload_left <= 0:
 		reload_left = current_stats().reload
 		feedback.emit("reload", {})
 
@@ -271,6 +271,7 @@ func attack() -> void:
 			if not hit.is_empty() and hit.collider is Actor:
 				var falloff := clampf(1 - eye().distance_to(hit.position) / 24, 0.3, 1) if pellets > 1 else 1.0
 				damage_enemy(hit.collider, stats.damage * opening_damage * falloff)
+				if rank_of("pierce") > 0: pierce_shot(hit.collider, direction, stats.damage * opening_damage * falloff)
 				if pellets > 1:
 					hit.collider.stagger_left = 0.3
 				connected = true
@@ -357,12 +358,13 @@ func tick_projectiles(dt: float) -> void:
 			if p.friendly and hit.collider is Actor:
 				element_hit(hit.collider, p.damage, p.element)
 			elif not p.friendly and hit.collider == player:
+				if has_method("projectile_source"): call("projectile_source", p)
 				hurt(p.damage)
 			if p.element == "fire":
 				feedback.emit("element_burst", {"at": hit.position, "color": Color("ff8660")})
 				if p.friendly:
 					for actor in actors:
-						if actor != hit.collider and actor.alive and not actor.claimed and actor.position.distance_to(hit.position) < 2.5 and ray(hit.position + Vector3.UP * 0.15, actor.position + Vector3.UP, 1).is_empty():
+						if actor != hit.collider and actor.alive and not actor.claimed and actor.position.distance_to(hit.position) < 2.5 * (1 + 0.5 * rank_of("bigblast")) and ray(hit.position + Vector3.UP * 0.15, actor.position + Vector3.UP, 1).is_empty():
 							element_hit(actor, p.damage * 0.5, "fire")
 			continue
 		if p.life <= 0:
@@ -384,6 +386,7 @@ func element_hit(actor, amount: float, element: String) -> void:
 		actor.burn_left = 2.0
 	elif element == "ice":
 		actor.frost_left = 2.5
+		if rank_of("deepfreeze") > 0: actor.stagger_left = [0.0, 1.2, 2.0][rank_of("deepfreeze")]
 	damage_enemy(actor, amount)
 	if element == "shock":
 		var count := 0
@@ -392,7 +395,7 @@ func element_hit(actor, amount: float, element: String) -> void:
 				damage_enemy(other, amount * 0.45)
 				feedback.emit("tracer", {"from": actor.position + Vector3.UP, "to": other.position + Vector3.UP, "color": Color("c6a0ff")})
 				count += 1
-				if count == 2:
+				if count == 2 + [0, 1, 3][rank_of("chain")]:
 					break
 
 func damage_enemy(actor, amount: float) -> void:
@@ -478,3 +481,16 @@ func tick_hazards(dt: float) -> void:
 	hazards = hazards.filter(func(h): return not h.has("kind"))
 	super.tick_hazards(dt)
 	hazards.append_array(shaped)
+
+func magazine_size() -> int:
+	return int(Weapons.info(body_kind).magazine * (1 + 0.5 * rank_of("mag")))
+
+func pierce_shot(first, direction: Vector3, damage: float) -> void:
+	var excluded: Array[RID] = [first.get_rid()]
+	var origin: Vector3 = eye()
+	for i in rank_of("pierce"):
+		var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 45, 5, excluded)
+		var hit := player.get_world_3d().direct_space_state.intersect_ray(query)
+		if hit.is_empty() or not hit.collider is Actor: break
+		excluded.append(hit.collider.get_rid())
+		damage_enemy(hit.collider, damage)

@@ -89,16 +89,17 @@ func refresh() -> void:
 					for i in 48:
 						project_segment(segments, hazard.at + Vector3(cos(i * TAU / 48), 0.04, sin(i * TAU / 48)) * hazard.radius, hazard.at + Vector3(cos((i + 1) * TAU / 48), 0.04, sin((i + 1) * TAU / 48)) * hazard.radius)
 				state.hazards.append_array(segments)
-	if modal == "augment":
+	if modal == "augment" and a.get("fun_mode") != true:
 		for id in a.upgrade_choices:
-			var item: Dictionary = Augments.DEFINITIONS[id]
+			var item: Dictionary = Augments.DEFINITIONS.get(id, {"name": "", "tag": "", "description": ""})
 			var combo_text := ""
-			if a.get("plans") != null:
+			if a.get("plans") != null and a.get("fun_mode") != true:
 				for combo in a.COMBOS.values():
 					if id in [combo[1], combo[2]]:
 						var partner: String = combo[2] if id == combo[1] else combo[1]
 						combo_text = tr("COMBO_READY") % Text.data(combo[0]) if a.rank_of(partner) > 0 else tr("COMBO_NEED") % [Text.data(combo[0]), Text.data(Augments.DEFINITIONS[partner].name)]
 			state.choices.append({"id": id, "name": Text.data(item.name), "tag": Text.data(item.tag), "description": Text.data(item.description), "effect": Text.effect(id, a.rank_of(id) + 1), "rank": a.rank_of(id) + 1, "combo": combo_text})
+	if a.get("fun_mode") == true: fun_snapshot(state)
 	if modal == "pause":
 		var key := str([a.body_kind, a.get("ghost_id"), a.body_profile, a.upgrades, a.state, a.decay, a.soul, a.get("relics"), a.get("quest_progress"), index, TranslationServer.get_locale()])
 		if key != details_key:
@@ -119,16 +120,16 @@ func make_details(index: int) -> Dictionary:
 	var values := [tr("NUM") % stats.damage, tr("LIFE_VALUE") % [a.decay if not profile.is_empty() else a.soul, a.decay_max if not profile.is_empty() else 20], tr("NUM") % (1 / stats.interval), tr("PERCENT") % ((1 - stats.damage_taken) * 100), tr("SPEED") % stats.move, tr("NUM") % stats.host_health, tr("SECONDS") % stats.reload if stats.reload > 0 else tr("NA"), tr("PERCENT") % (profile.get("resistance", 0) * 100)]
 	var build: Array[String] = []
 	for id in a.upgrades:
-		build.append(tr("AUG_OWNED") % [Text.data(Augments.DEFINITIONS[id].name), a.rank_of(id), Text.effect(id, a.rank_of(id))])
+		build.append(tr("AUG_OWNED") % [(preload("res://scripts/fun_augments.gd").DATA[id][0] if a.get("fun_mode") == true else Text.data(Augments.DEFINITIONS[id].name)), a.rank_of(id), (preload("res://scripts/fun_augments.gd").DATA[id][2] if a.get("fun_mode") == true else Text.effect(id, a.rank_of(id)))])
 	var data := {"detail_name": (Text.data(profile.get("name", "")) + " " + Text.data(Weapons.info(a.body_kind).name)) if not profile.is_empty() else tr("SOUL"),
 		"trait": Text.data(profile.description) if not profile.is_empty() else tr("EMPTY_HOST"), "values": values,
 		"iv": tr("IV") % [(profile.get("attack_iv", 1) - 1) * 100, (profile.get("move_iv", 1) - 1) * 100, (profile.get("vitality_iv", 1) - 1) * 100],
 		"build": tr("BUILD") % tr("SEPARATOR").join(build) if not build.is_empty() else tr("EMPTY_BUILD"),
-		"route": "", "combos": "", "relics": "", "quest": "", "has_journal": a.get("plans") != null}
+		"route": "", "combos": "", "relics": "", "quest": "", "has_journal": a.get("plans") != null and a.get("fun_mode") != true}
 	if profile.is_empty() and a.get("ghost_id") != null:
 		data.detail_name = tr("GHOST_NAME_" + a.ghost_id.to_upper())
 		data.trait = tr("GHOST_DESC_" + a.ghost_id.to_upper())
-	if a.get("plans") != null:
+	if a.get("plans") != null and a.get("fun_mode") != true:
 		data.route = tr("ROUTE_TITLE") + "\n\n"
 		for i in range(1, 8):
 			data.route += tr("ROUTE_ROW") % [tr("ROUTE_DONE" if i < index else ("ROUTE_CURRENT" if i == index else "ROUTE_FUTURE")), i, room_name(i)] + "\n\n"
@@ -143,6 +144,7 @@ func make_details(index: int) -> Dictionary:
 	return data
 
 func on_feedback(event: String, data: Dictionary) -> void:
+	if authority.get("fun_mode") == true and event in ["room_clear", "combat_start", "start", "reinforcements"]: return
 	if event in ["hit", "weapon_fire", "shot"] and data.get("hit", event == "hit"):
 		impact_requested.emit()
 	var messages := {"inhabit": "TOAST_INHABIT", "exposed": "TOAST_EXPOSED", "rejected": "TOAST_REJECTED", "unreachable": "TOAST_UNREACHABLE", "soul_focus": "TOAST_FOCUS", "supply": "TOAST_SUPPLY", "room_clear": "TOAST_CLEAR", "reinforcements": "TOAST_WAVE", "loaded": "TOAST_LOADED", "upgrade_chosen": "TOAST_UPGRADE", "milestone": "TOAST_MILESTONE", "element_notice": "TOAST_ELEMENT", "detection": "TOAST_DETECTION", "start": "TOAST_START", "combat_start": "TOAST_COMBAT", "level_ready": "TOAST_LEVEL", "boss_warning": "TOAST_BOSS"}
@@ -154,3 +156,29 @@ func on_feedback(event: String, data: Dictionary) -> void:
 		toast_requested.emit("BOSS_CLEAR_%d" % authority.room_index)
 	elif messages.has(event):
 		toast_requested.emit(messages[event])
+
+func fun_snapshot(state: Dictionary) -> void:
+	var a = authority
+	state.fun = true
+	state.stage = "%d / 3" % a.room_index
+	state.enemies = str(a.remaining() + a.spawn_queue.size())
+	state.life = "%.1f / %.0f초" % [a.decay if state.body else a.soul, a.decay_max if state.body else 20.0]
+	if state.body and a.magazine_size() > 0: state.ammo = "%d / %d" % [a.ammo, a.magazine_size()]
+	state.visited = a.visited.duplicate()
+	state.cleared = a.cleared.duplicate()
+	state.room = a.room_index
+	state.tutorial = a.tutorial
+	state.tutorial_step = a.tutorial_step
+	state.reward_ready = a.phase == "rest" and not a.rewards[a.room_index - 1]
+	state.death_reason = a.death_reason
+	var aimed = a.aimed_actor()
+	if is_instance_valid(aimed) and aimed.has_meta("fodder"):
+		state.reachable = false
+		state.interaction = "굶주린 것 · 빙의 불가"
+	state.choices.clear()
+	if state.modal == "augment":
+		for id in a.upgrade_choices:
+			var item: Array = preload("res://scripts/fun_augments.gd").DATA[id]
+			state.choices.append({"id": id, "name": item[0], "tag": {"gun": "총기", "melee": "근접", "bow": "활", "magic": "마법", "neutral": "유령·생존"}[item[1]], "description": item[4], "effect": preload("res://scripts/fun_augments.gd").effect(id, a.rank_of(id) + 1), "rank": a.rank_of(id) + 1, "combo": "→ " + item[3] + "에 유리"})
+			if id == "mag" and state.body and a.magazine_size() > 0:
+				state.choices[-1].effect += " · %d → %d발" % [a.magazine_size(), int(Weapons.info(a.body_kind).magazine * (1 + 0.5 * (a.rank_of(id) + 1)))]

@@ -158,6 +158,15 @@ func present(state: Dictionary) -> void:
 		put("pause", "Body/StatLabel0", tr("PELLET" if state.kind == "shotgun" else ("CHARGE" if state.kind == "archer" else "DAMAGE")))
 		for i in 8: put("pause", "Body/StatValue" + str(i), state.values[i])
 		update_tab()
+	if state.get("fun", false):
+		put("hud", "Host/Caption", "몸 수명 · 자연 부패 중" if state.body else ("유령 · 전투 시간" if state.phase == "combat" else "유령 · 시간 정지"))
+		if modal == "title":
+			put("title", "Subtitle", "몸을 빼앗고, 다음 방으로." if state.outcome == "" else ("세 방을 통과했습니다" if state.outcome == "CLEAR" else state.death_reason))
+			put("title", "Description", "적을 약화해 빙의하세요.\n몸은 계속 썩습니다. 전투 후 증강을 고르고 문으로 이동하세요." if state.outcome == "" else state.end_stats)
+		if modal == "augment":
+			put("augment", "Subtitle", "지금 몸을 강화할지, 다음에 찾을 몸을 정할지 선택하세요")
+			put("augment", "Footer", "선택 중에는 부패와 전투 시간이 멈춥니다")
+			screens.augment.get_node("Reroll").hide()
 
 func update_tab() -> void:
 	put("pause", "Title", tr("TAB_" + selected_tab.to_upper() if selected_tab in ["Settings", "Records", "Controls"] else "PAUSE_TITLE"))

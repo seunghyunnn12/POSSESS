@@ -27,6 +27,7 @@ var guided_run := true
 var campaign_run := true
 var action_run := true
 var suppress_fire := false
+var fun_run := false
 
 func _ready() -> void:
 	# Script-driven QA must never unlock characters in the player's real profile.
@@ -38,7 +39,8 @@ func _ready() -> void:
 		if argument.begins_with("--seed=") and argument.trim_prefix("--seed=").is_valid_int():
 			run_seed = int(argument.trim_prefix("--seed="))
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	arena = Arena.new()
+	fun_run = (not ("--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args()) or "--fun" in OS.get_cmdline_user_args()) and guided_run and campaign_run and action_run
+	arena = preload("res://scripts/fun_arena.gd").new() if fun_run else Arena.new()
 	arena.run_seed = run_seed
 	arena.layout = "training" if guided_run else "ossuary"
 	arena.name = "Arena"
@@ -56,12 +58,15 @@ func _ready() -> void:
 	shape.shape = capsule
 	player.add_child(shape)
 	add_child(player)
-	authority = ((Action.new() if action_run else Campaign.new()) if campaign_run else Journey.new()) if guided_run else Authority.new()
+	authority = preload("res://scripts/fun.gd").new() if fun_run else ((Action.new() if action_run else Campaign.new()) if campaign_run else Journey.new()) if guided_run else Authority.new()
 	if authority is Campaign:
 		authority.run_seed = run_seed
 	authority.name = "authority"
 	add_child(authority)
 	authority.configure(player, arena.enemies)
+	if fun_run:
+		authority.world = arena
+		arena.source = authority
 	if authority is Action: authority.select_ghost(ghost_progress.selected, ghost_progress.unlocked)
 	authority.yaw = aim.x
 	authority.pitch = aim.y
@@ -89,6 +94,13 @@ func _ready() -> void:
 	ui_presenter.setup(authority, camera)
 	ui_presenter.ghost_progress = ghost_progress
 	hud.bind(ui_presenter)
+	if fun_run:
+		var overlay = preload("res://scripts/fun_overlay.gd").new()
+		overlay.name = "FunOverlay"
+		overlay.bindings = settings.bindings
+		hud.canvas.add_child(overlay)
+		ui_presenter.snapshot_changed.connect(overlay.present)
+		hud.screens.hud.get_node("Host/LifeBar").hide()
 	hud.bindings = settings.bindings
 	hud.records = records
 	hud.screens.pause.get_node("Controls/Keys").hide()
@@ -183,7 +195,7 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 	# Preserve the existing title shortcut before Control focus navigation uses Tab.
-	if authority != null and not authority.running and not authority.paused and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_TAB:
+	if authority != null and (not authority.running or (fun_run and authority.tutorial)) and not authority.paused and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_TAB:
 		_unhandled_input(event)
 		get_viewport().set_input_as_handled()
 
@@ -200,6 +212,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_sync_mouse()
 			return
 		if authority is Campaign and event.physical_keycode == KEY_J:
+			if fun_run: return
 			if not authority.running:
 				return
 			authority.journal_open = not authority.journal_open
@@ -216,7 +229,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ENTER:
 				_continue()
 			KEY_TAB:
-				if guided_run and not authority.running:
+				if guided_run and (not authority.running or (fun_run and authority.tutorial)):
 					authority.skip_training()
 					_sync_mouse()
 			KEY_ESCAPE:
@@ -257,13 +270,15 @@ func _feedback(event: String, data: Dictionary) -> void:
 		run_recorded = true
 		records.record(authority)
 		if records.save_error != OK: hud.show_toast("RECORD_SAVE_ERROR")
-	if authority is Action:
+	if authority is Action and not fun_run:
 		var unlocked_id: String = data.get("id", "") if event == "ghost_unlock" else ""
 		if event == "end" and data.get("result", "") == "CLEAR" and authority.room_index == authority.room_total:
 			unlocked_id = "gunslinger"
 		if unlocked_id != "" and ghost_progress.unlock(unlocked_id):
 			hud.show_toast("GHOST_UNLOCK_" + unlocked_id.to_upper())
 			if ghost_progress.save_error != OK: hud.show_toast("GHOST_SAVE_ERROR")
+	if event == "damage_detail" and fun_run:
+		hud.canvas.get_node("FunOverlay").damage(data, authority.yaw, player.position, authority.decay_max)
 	if event == "kick":
 		aim = Vector2(authority.yaw, authority.pitch)
 	if event == "load_room":
@@ -292,7 +307,7 @@ func _feedback(event: String, data: Dictionary) -> void:
 	if event in ["end", "upgrade_offer", "upgrade_chosen", "inhabit", "briefing", "combat_start", "travel"]:
 		suppress_fire = true
 		_sync_mouse()
-	if event == "supply":
+	if event == "supply" and not fun_run:
 		arena.supply_lid.rotation.x = -0.6
 		arena.supply_glow.hide()
 

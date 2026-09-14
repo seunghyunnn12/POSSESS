@@ -307,9 +307,9 @@ func attack() -> void:
 			if not actor.alive or actor.claimed:
 				continue
 			var delta: Vector3 = actor.position + Vector3.UP - eye()
-			if delta.length() < 3.2 and forward().dot(delta.normalized()) > 0.35:
-				var hit := ray(eye(), actor.position + Vector3.UP)
-				if not hit.is_empty() and hit.collider == actor:
+			if delta.length() < 3.2 * (1 + 0.4 * rank_of("shockwave")) and forward().dot(delta.normalized()) > 0.35:
+				var hit := ray(eye(), actor.position + Vector3.UP, 1)
+				if hit.is_empty():
 					damage_enemy(actor, stats.damage * opening_multiplier)
 					count += 1
 		feedback.emit("swing", {"hit": count > 0})

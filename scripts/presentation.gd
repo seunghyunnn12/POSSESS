@@ -134,6 +134,7 @@ func _process(dt: float) -> void:
 			ids[p.id] = true
 			if not projectile_visuals.has(p.id):
 				var color := Color("82e2c3") if p.element == "soul" else (Color("78dfff") if p.element == "ice" else (Color("ff8660") if p.element == "fire" else Color("c6a0ff")))
+				if authority.get("fun_mode") == true and not p.friendly: color = Color("ff5848")
 				projectile_visuals[p.id] = Arena.box(self, Vector3(0.03, 0.03, 0.65), p.at, Arena.material(color, 0.6)) if p.element == "ice" else Arena.sphere(self, maxf(0.16, p.get("radius", 0.0)), p.at, Arena.material(color, 0.6))
 			projectile_visuals[p.id].position = p.at
 			if p.element == "soul":
@@ -157,7 +158,7 @@ func _process(dt: float) -> void:
 	var is_body: bool = authority.state == Authority.State.Body
 	var rot: float = 1.0 - authority.decay / authority.decay_max if is_body else 0.0
 	displayed_soul = move_toward(displayed_soul, 0.0 if is_body else 1.0, dt * 4.0)
-	shader.set_shader_parameter("soul", displayed_soul)
+	shader.set_shader_parameter("soul", 0.0 if authority.get("fun_mode") == true else displayed_soul)
 	shader.set_shader_parameter("rot", rot)
 	shader.set_shader_parameter("pulse", pulse)
 	shader.set_shader_parameter("pain", pain)
@@ -189,6 +190,10 @@ func _process(dt: float) -> void:
 	var aimed = authority.aimed_actor()
 	for actor in authority.actors:
 		if not actor.alive or actor.claimed:
+			continue
+		if actor.has_meta("fodder"):
+			actor.label.hide()
+			actor.visual.rotation.x = -0.28 if actor.windup > 0 else 0.0
 			continue
 		actor.flash = maxf(0.0, actor.flash - dt)
 		var probability: float = authority.capture_chance(actor)
@@ -226,9 +231,9 @@ func on_feedback(event: String, data: Dictionary) -> void:
 		"travel":
 			sound.play("door", -5)
 		"combat_start":
-			if authority.get("room_index") in [3, 7]: sound.play("bell", -3)
+			if authority.get("fun_mode") != true and authority.get("room_index") in [3, 7]: sound.play("bell", -3)
 		"room_clear":
-			if authority.get("room_index") in [3, 7]: sound.play("bell", -8)
+			if authority.get("fun_mode") != true and authority.get("room_index") in [3, 7]: sound.play("bell", -8)
 		"load_room":
 			clear_effects()
 		"tracer":
