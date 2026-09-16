@@ -42,7 +42,8 @@ func _ready() -> void:
 	fun_run = (not ("--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args()) or "--fun" in OS.get_cmdline_user_args()) and guided_run and campaign_run and action_run
 	if fun_run:
 		if run_seed == 0: run_seed = randi_range(1, 999999)
-		DisplayServer.window_set_title("POSSESS — 연결된 방 3개")
+		aim = Vector2(-0.55, -0.02)
+		DisplayServer.window_set_title("POSSESS — 시작 방 · 두 갈래 탐험")
 	arena = preload("res://scripts/fun_arena.gd").new() if fun_run else Arena.new()
 	arena.run_seed = run_seed
 	arena.layout = "training" if guided_run else "ossuary"

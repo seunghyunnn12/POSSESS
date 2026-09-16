@@ -1,0 +1,29 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+START first=3 phase=rest alive=0 queue=0 soul=20.0
+WALK (0.0, 0.0) actual=(0.0, 0.000195, 0.129998) room=1 phase=rest
+WALK (14.0, 0.0) actual=(13.87625, 0.000195, -0.005671) room=3 phase=combat
+ENTER other branch alive=0
+CLEAR 3 flags=[true, false, true] reward=true
+WALK (0.0, 0.0) actual=(0.122924, 0.000195, -0.000048) room=1 phase=rest
+WALK (0.0, 0.0) actual=(0.122924, 0.000195, -0.000048) room=1 phase=rest
+WALK (0.0, -15.0) actual=(0.001199, 0.000195, -14.84628) room=2 phase=combat
+ENTER other branch alive=0
+CLEAR 2 flags=[true, true, true] reward=false
+WALK (0.0, 0.0) actual=(0.00001, 0.000195, -0.136296) room=1 phase=rest
+WALK (0.0, 16.0) actual=(0.000001, 0.000195, 15.12036) room=1 phase=rest
+ORDER 3 -> 2 COMPLETE
+START first=2 phase=rest alive=0 queue=0 soul=20.0
+WALK (0.0, 0.0) actual=(0.0, 0.000195, 0.129998) room=1 phase=rest
+WALK (0.0, -15.0) actual=(0.0, 0.000195, -14.76665) room=2 phase=combat
+ENTER other branch alive=0
+CLEAR 2 flags=[true, true, false] reward=true
+WALK (0.0, 0.0) actual=(0.0, 0.000195, -0.193333) room=1 phase=rest
+WALK (0.0, 0.0) actual=(0.0, 0.000195, -0.193333) room=1 phase=rest
+WALK (14.0, 0.0) actual=(13.75222, 0.000195, -0.003245) room=3 phase=combat
+ENTER other branch alive=0
+CLEAR 3 flags=[true, true, true] reward=false
+WALK (0.0, 0.0) actual=(0.135559, 0.000195, -0.00003) room=1 phase=rest
+WALK (0.0, 16.0) actual=(0.007121, 0.000195, 15.11951) room=1 phase=rest
+ORDER 2 -> 3 COMPLETE

@@ -160,7 +160,7 @@ func on_feedback(event: String, data: Dictionary) -> void:
 func fun_snapshot(state: Dictionary) -> void:
 	var a = authority
 	state.fun = true
-	state.stage = "%d / 3" % a.room_index
+	state.stage = ["시작 방", "북쪽 회랑", "동쪽 묘실"][a.room_index - 1]
 	state.enemies = str(a.remaining() + a.spawn_queue.size())
 	state.soul = "영혼 Lv.%d · 피해 +%d%% · %d/%d" % [a.level, a.essence * 3, a.xp, a.xp_next]
 	state.life = "%.1f / %.0f초" % [a.decay if state.body else a.soul, a.decay_max if state.body else 20.0]

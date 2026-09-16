@@ -162,8 +162,8 @@ func present(state: Dictionary) -> void:
 		put("hud", "Host/Caption", "몸 수명 · 자연 부패 중" if state.body else ("유령 · 전투 시간" if state.phase == "combat" else "유령 · 시간 정지"))
 		if modal == "title":
 			put("title", "Footer", "연결된 방 3개 · 플레이 검증")
-			put("title", "Subtitle", "몸을 빼앗고, 다음 방으로." if state.outcome == "" else ("세 방을 통과했습니다" if state.outcome == "CLEAR" else state.death_reason))
-			put("title", "Description", "적을 약화해 빙의하세요.\n몸은 계속 썩습니다. 전투 후 증강을 고르고 문으로 이동하세요." if state.outcome == "" else state.end_stats)
+			put("title", "Subtitle", "문을 고르고, 탐험을 시작하세요." if state.outcome == "" else ("두 갈래 탐험을 마쳤습니다" if state.outcome == "CLEAR" else state.death_reason))
+			put("title", "Description", "적이 없는 시작 방에서 출발합니다.\n원하는 문으로 들어가 싸우고, 돌아와 다른 길을 탐험하세요." if state.outcome == "" else state.end_stats)
 		if modal == "augment":
 			put("augment", "Subtitle", "지금 몸을 강화할지, 다음에 찾을 몸을 정할지 선택하세요")
 			put("augment", "Footer", "선택 중에는 부패와 전투 시간이 멈춥니다")

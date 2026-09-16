@@ -5,8 +5,8 @@ var learned := false
 var fun_mode := true
 var world
 var visited := [false, false, false]
-var cleared := [false, false, false]
-var rewards := [false, false, false]
+var cleared := [true, false, false]
+var rewards := [true, false, false]
 var spawn_queue: Array = []
 var spawn_clock := 0.0
 var tutorial := false
@@ -51,16 +51,21 @@ func enter_room(index: int) -> void:
 	room_index = index
 	actors = world.room_actors[index - 1]
 	phase = "rest" if cleared[index - 1] else "combat"
+	if index == 1:
+		visited[0] = true
+		spawn_queue.clear()
+		return
 	if visited[index - 1]: return
 	visited[index - 1] = true
 	spawn_queue = actors.filter(func(a): return a.has_meta("fodder"))
 	spawn_clock = 2.0
 	activate_hosts()
-	if index > 1: world.gate(index - 2, false)
+	world.gate(index - 2, false)
 	clear_pending = false
 	invulnerable = maxf(invulnerable, 1)
 
 func activate_hosts() -> void:
+	if room_index == 1: return
 	for i in 4:
 		if tutorial and i > 0: continue
 		var actor = actors[i]
@@ -103,11 +108,12 @@ func finish(result: String) -> void:
 	if result == "CLEAR":
 		phase = "rest"
 		cleared[room_index - 1] = true
-		# The final room tests the two earlier choices; there is no unused end reward.
-		if room_index == room_total: rewards[room_index - 1] = true
+		# Whichever branch is explored first supplies the next fight's augment.
+		if cleared[1] and cleared[2]: rewards[room_index - 1] = true
 		clear_pending = false
-		world.gate(room_index - 1, true)
-		if room_index > 1: world.gate(room_index - 2, true)
+		projectiles.clear()
+		world.gate(room_index - 2, true)
+		world.gate(2, cleared[1] and cleared[2])
 		feedback.emit("room_clear", {"index": room_index})
 		return
 	if death_reason.is_empty():
@@ -271,8 +277,8 @@ func _physics_process(dt: float) -> void:
 				world.set_active(actor, true)
 				actor.attack_clock = 1
 			spawn_clock = 0.4
-	if tutorial and actors[0].hp < actors[0].max_hp * 0.5: tutorial_step = 1
-	if tutorial and not actors[0].alive:
+	if tutorial and not actors.is_empty() and actors[0].hp < actors[0].max_hp * 0.5: tutorial_step = 1
+	if tutorial and not actors.is_empty() and not actors[0].alive:
 		tutorial = false
 		learned = true
 		activate_hosts()
@@ -280,11 +286,14 @@ func _physics_process(dt: float) -> void:
 	if phase == "rest":
 		if intent.interact: open_reward()
 		var next := room_index
-		if room_index < 3 and player.position.z < 11 - 24 * room_index: next += 1
-		elif room_index > 1 and player.position.z > 37 - 24 * room_index: next -= 1
+		if room_index == 1:
+			if player.position.z < -13: next = 2
+			elif player.position.x > 12: next = 3
+		elif room_index == 2 and player.position.z > -11: next = 1
+		elif room_index == 3 and player.position.x < 10: next = 1
 		if next != room_index:
 			enter_room(next)
-		if room_index == 3 and player.position.z < -62:
+		if room_index == 1 and cleared[1] and cleared[2] and player.position.z > 15:
 			outcome = "CLEAR"
 			focus_left = 0
 			Engine.time_scale = 1

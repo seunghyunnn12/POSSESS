@@ -1,0 +1,8 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+WALK (0.0, 0.0) actual=(0.0, 0.000749, 0.129998) room=1 phase=rest
+WALK (14.0, 0.0) actual=(13.87624, 0.000749, -0.005671) room=3 phase=combat
+SEALED east x=11.4451894760132 room=3
+CLEAR 3 flags=[true, false, true] reward=true
+WALK (0.0, 0.0) actual=(0.225183, 0.000749, -0.000108) room=1 phase=rest
+BODY BACKTRACK kind=soldier ammo=7 decay=33.0666666666668 -> 28.0666666666668
