@@ -1,0 +1,14 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+MAG rank1 shotgun reload=9 max=9
+PIERCE rank2 hp=[78.0, 78.0, 78.0]
+SHOCKWAVE rank1 at4.2m hp=32.0
+LEECH rank1 life=13.5
+QUICKDRAW rank1 charge after0.1=0.22222222222222
+FREEZE rank2 seconds=2.0
+BLAST rank1 distant hp=85.0
+CHAIN rank1 hp=[74.0, 88.3, 88.3, 88.3]
+HARVEST rank2 host life=12.5
+MERCY rank2 full-health chance=0.31
+GLASS rank1 stats={ "damage": 33.0, "move": 6.0, "life": 31.5, "interval": 0.13, "reload": 1.3, "magazine": 18, "recoil": 0.19, "damage_taken": 1.0, "host_health": 100.0, "enemy_move": 2.5, "enemy_damage": 2.0, "enemy_interval": 2.4 }
+CURSE rank2 ghost damage=30.0

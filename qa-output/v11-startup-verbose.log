@@ -1,0 +1,85 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Using "default" pen tablet driver...
+
+Loading resource: res://locale/ko.ko.translation remapped: res://locale/ko.ko.translation
+Completed load for: 'res://locale/ko.ko.translation' remapped 'res://locale/ko.ko.translation' at thread -1
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+Loading resource: res://theme/possess.tres remapped: res://theme/possess.tres
+Loading resource: res://assets/fonts/NotoSansKR.ttf remapped: res://assets/fonts/NotoSansKR.ttf
+Loading resource: res://.godot/imported/NotoSansKR.ttf-3ae954ae8c14792ea34daf89520c1713.fontdata remapped: res://.godot/imported/NotoSansKR.ttf-3ae954ae8c14792ea34daf89520c1713.fontdata
+Completed load for: 'res://assets/fonts/NotoSansKR.ttf' remapped 'res://assets/fonts/NotoSansKR.ttf' at thread -1
+Completed load for: 'res://theme/possess.tres' remapped 'res://theme/possess.tres' at thread -1
+CORE API HASH: 3769296884
+EDITOR API HASH: 3146738256
+SceneTreeFTI: traversal method DEFAULT
+Loaded system CA certificates
+Loading resource: res://scenes/main.tscn remapped: res://scenes/main.tscn
+Loading resource: res://scripts/main.gd remapped: res://scripts/main.gd
+Loading resource: res://assets/ui/illustrations/bell_gate.png remapped: res://assets/ui/illustrations/bell_gate.png
+Loading resource: res://.godot/imported/bell_gate.png-458fa735915c607bfd09798f10c976ce.ctex remapped: res://.godot/imported/bell_gate.png-458fa735915c607bfd09798f10c976ce.ctex
+Completed load for: 'res://assets/ui/illustrations/bell_gate.png' remapped 'res://assets/ui/illustrations/bell_gate.png' at thread -1
+Loading resource: res://shaders/perception.gdshader remapped: res://shaders/perception.gdshader
+Completed load for: 'res://shaders/perception.gdshader' remapped 'res://shaders/perception.gdshader' at thread -1
+Loading resource: res://shaders/fun_background.gdshader remapped: res://shaders/fun_background.gdshader
+Completed load for: 'res://shaders/fun_background.gdshader' remapped 'res://shaders/fun_background.gdshader' at thread -1
+Completed load for: 'res://scripts/main.gd' remapped 'res://scripts/main.gd' at thread -1
+Completed load for: 'res://scenes/main.tscn' remapped 'res://scenes/main.tscn' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Rogue.glb remapped: res://assets/characters/skeletons/Skeleton_Rogue.glb
+Loading resource: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn remapped: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn
+Loading resource: res://assets/characters/skeletons/Skeleton_Rogue_skeleton_texture.png remapped: res://assets/characters/skeletons/Skeleton_Rogue_skeleton_texture.png
+Loading resource: res://.godot/imported/Skeleton_Rogue_skeleton_texture.png-b642369a8199dbbbdfbffae647dfd171.ctex remapped: res://.godot/imported/Skeleton_Rogue_skeleton_texture.png-b642369a8199dbbbdfbffae647dfd171.ctex
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Rogue_skeleton_texture.png' remapped 'res://assets/characters/skeletons/Skeleton_Rogue_skeleton_texture.png' at thread -1
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Rogue.glb' remapped 'res://assets/characters/skeletons/Skeleton_Rogue.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Warrior.glb remapped: res://assets/characters/skeletons/Skeleton_Warrior.glb
+Loading resource: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn remapped: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn
+Loading resource: res://assets/characters/skeletons/Skeleton_Warrior_skeleton_texture.png remapped: res://assets/characters/skeletons/Skeleton_Warrior_skeleton_texture.png
+Loading resource: res://.godot/imported/Skeleton_Warrior_skeleton_texture.png-45b43925fff2f1762605d7dabeff1294.ctex remapped: res://.godot/imported/Skeleton_Warrior_skeleton_texture.png-45b43925fff2f1762605d7dabeff1294.ctex
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Warrior_skeleton_texture.png' remapped 'res://assets/characters/skeletons/Skeleton_Warrior_skeleton_texture.png' at thread -1
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Warrior.glb' remapped 'res://assets/characters/skeletons/Skeleton_Warrior.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Warrior.glb remapped: res://assets/characters/skeletons/Skeleton_Warrior.glb
+Loading resource: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn remapped: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Warrior.glb' remapped 'res://assets/characters/skeletons/Skeleton_Warrior.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Mage.glb remapped: res://assets/characters/skeletons/Skeleton_Mage.glb
+Loading resource: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn remapped: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn
+Loading resource: res://assets/characters/skeletons/Skeleton_Mage_skeleton_texture.png remapped: res://assets/characters/skeletons/Skeleton_Mage_skeleton_texture.png
+Loading resource: res://.godot/imported/Skeleton_Mage_skeleton_texture.png-e5f425effd80374c167afad2b4aab969.ctex remapped: res://.godot/imported/Skeleton_Mage_skeleton_texture.png-e5f425effd80374c167afad2b4aab969.ctex
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Mage_skeleton_texture.png' remapped 'res://assets/characters/skeletons/Skeleton_Mage_skeleton_texture.png' at thread -1
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Mage.glb' remapped 'res://assets/characters/skeletons/Skeleton_Mage.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Mage.glb remapped: res://assets/characters/skeletons/Skeleton_Mage.glb
+Loading resource: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn remapped: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Mage.glb' remapped 'res://assets/characters/skeletons/Skeleton_Mage.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Warrior.glb remapped: res://assets/characters/skeletons/Skeleton_Warrior.glb
+Loading resource: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn remapped: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Warrior.glb' remapped 'res://assets/characters/skeletons/Skeleton_Warrior.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Rogue.glb remapped: res://assets/characters/skeletons/Skeleton_Rogue.glb
+Loading resource: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn remapped: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Rogue.glb' remapped 'res://assets/characters/skeletons/Skeleton_Rogue.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Warrior.glb remapped: res://assets/characters/skeletons/Skeleton_Warrior.glb
+Loading resource: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn remapped: res://.godot/imported/Skeleton_Warrior.glb-7920aaf2df1bbcdddb4d47449b9f824c.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Warrior.glb' remapped 'res://assets/characters/skeletons/Skeleton_Warrior.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Rogue.glb remapped: res://assets/characters/skeletons/Skeleton_Rogue.glb
+Loading resource: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn remapped: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Rogue.glb' remapped 'res://assets/characters/skeletons/Skeleton_Rogue.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Rogue.glb remapped: res://assets/characters/skeletons/Skeleton_Rogue.glb
+Loading resource: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn remapped: res://.godot/imported/Skeleton_Rogue.glb-3de0aac3e785f2fb8fd4484f71a6a4e5.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Rogue.glb' remapped 'res://assets/characters/skeletons/Skeleton_Rogue.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Mage.glb remapped: res://assets/characters/skeletons/Skeleton_Mage.glb
+Loading resource: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn remapped: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Mage.glb' remapped 'res://assets/characters/skeletons/Skeleton_Mage.glb' at thread -1
+Loading resource: res://assets/characters/skeletons/Skeleton_Mage.glb remapped: res://assets/characters/skeletons/Skeleton_Mage.glb
+Loading resource: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn remapped: res://.godot/imported/Skeleton_Mage.glb-f97677a4f83dd75437875d509204b949.scn
+Completed load for: 'res://assets/characters/skeletons/Skeleton_Mage.glb' remapped 'res://assets/characters/skeletons/Skeleton_Mage.glb' at thread -1
+Loading resource: res://scenes/ui/hud.tscn remapped: res://scenes/ui/hud.tscn
+Loading resource: res://scripts/ui_frame.gd remapped: res://scripts/ui_frame.gd
+Completed load for: 'res://scripts/ui_frame.gd' remapped 'res://scripts/ui_frame.gd' at thread -1
+Completed load for: 'res://scenes/ui/hud.tscn' remapped 'res://scenes/ui/hud.tscn' at thread -1
+Loading resource: res://scenes/ui/title.tscn remapped: res://scenes/ui/title.tscn
+Completed load for: 'res://scenes/ui/title.tscn' remapped 'res://scenes/ui/title.tscn' at thread -1
+Loading resource: res://scenes/ui/augment.tscn remapped: res://scenes/ui/augment.tscn
+Completed load for: 'res://scenes/ui/augment.tscn' remapped 'res://scenes/ui/augment.tscn' at thread -1
+Loading resource: res://scenes/ui/pause.tscn remapped: res://scenes/ui/pause.tscn
+Loading resource: res://scripts/settings_panel.gd remapped: res://scripts/settings_panel.gd
+Completed load for: 'res://scripts/settings_panel.gd' remapped 'res://scripts/settings_panel.gd' at thread -1
+Completed load for: 'res://scenes/ui/pause.tscn' remapped 'res://scenes/ui/pause.tscn' at thread -1

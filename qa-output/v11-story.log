@@ -1,0 +1,18 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+PASS: title establishes player purpose before combat
+PASS: illustration loads from project assets
+PASS: travel shows destination before loading room
+PASS: destination remains stable across actual scene swap
+PASS: illustrated travel does not consume soul life
+PASS: pause is never covered by passage artwork
+PASS: existing travel duration reaches deliberate first briefing
+PASS: first briefing uses existing continue action
+PASS: middle boss introduces its narrative role
+PASS: middle boss clear acknowledges opened seal
+PASS: same-frame generic reward cannot erase boss resolution
+PASS: passage tips respect rebound controls
+PASS: final exit resolves opening narrative
+PASS: result screen keeps menu labels
+STORY: 14 checks, 0 failures

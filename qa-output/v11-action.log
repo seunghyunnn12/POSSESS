@@ -1,0 +1,53 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: practice only requires weakening and possessing, not eight chores
+PASS: visible door accepts close contact and upward aim at x=-2.8
+PASS: visible door accepts close contact and upward aim at x=0.0
+PASS: visible door accepts close contact and upward aim at x=2.8
+PASS: facing away from doorway cannot interact
+PASS: holding F too far from door cannot leave
+PASS: walking up to visible door keeps interaction available
+PASS: F hold displays progress before travel
+PASS: releasing F resets door progress
+PASS: holding F at the actual door starts travel
+PASS: training body survives first doorway
+PASS: multiple levels never open or delay combat
+PASS: combat clock continues after level-up
+PASS: inhabit soldier supplies its own weapon and magazine
+PASS: host stats use soldier weapon definition
+PASS: inhabit brute supplies its own weapon and magazine
+PASS: host stats use brute weapon definition
+PASS: inhabit shotgun supplies its own weapon and magazine
+PASS: host stats use shotgun weapon definition
+PASS: shotgun hits with pellets and spends one shell
+PASS: recoil changes actual aim and remains synchronized with input
+PASS: shotgun reload fills six shells instead of rifle eighteen
+PASS: inhabit archer supplies its own weapon and magazine
+PASS: host stats use archer weapon definition
+PASS: arrow travels through world rather than immediate hitscan
+PASS: pause freezes projectile movement
+PASS: arrow collides and applies frost
+PASS: inhabit mage supplies its own weapon and magazine
+PASS: host stats use mage weapon definition
+PASS: fire projectile creates thermal shock on frozen target
+PASS: fire leaves real damage over time
+PASS: inhabit storm supplies its own weapon and magazine
+PASS: host stats use storm weapon definition
+PASS: lightning chains into another nearby enemy
+PASS: body loss creates three real seconds of slow-motion selection
+PASS: pause does not consume soul focus
+PASS: possession restores normal time immediately
+PASS: dash has cooldown and respects wall collision
+PASS: dead enemy remains visible for collapse but cannot block shots
+PASS: growth selection waits until entire room clear
+PASS: one room produces only one choice; surplus growth is automatic
+PASS: surplus experience is preserved as strength
+PASS: optional route menu never blocks ordinary exit
+PASS: next room flows directly into combat without briefing modal
+PASS: body identity, traits and magazine survive travel
+PASS: old room projectiles do not follow player
+PASS: boss line attack damages inside its strip
+PASS: jump height can clear the boss shockwave
+PASS: boss alternates line, shockwave and aimed ground strike
+PASS: scene disposal restores global time
+ACTION RESULT: 50 checks, 0 failures

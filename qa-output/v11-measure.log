@@ -1,0 +1,8 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+RX580 / 1280x720 / VSync disabled / 3 rooms loaded
+15 live enemies, refill to 20 swept projectiles; invulnerable ghost; enemy HP held
+Measured minimum enemies=15, projectiles=18
+Frames=9938 Mean=1.21ms p95=1.99ms p99=2.43ms
+

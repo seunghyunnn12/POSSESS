@@ -1,0 +1,4 @@
+RX580 / 1280x720 / VSync disabled / 3 rooms loaded
+15 live enemies, refill to 20 swept projectiles; invulnerable ghost; enemy HP held
+Measured minimum enemies=15, projectiles=18
+Frames=9938 Mean=1.21ms p95=1.99ms p99=2.43ms

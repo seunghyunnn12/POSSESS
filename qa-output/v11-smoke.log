@@ -1,0 +1,50 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: room contains exactly five hosts
+PASS: initial soul state
+PASS: full health possession chance
+PASS: weakening raises possession chance
+PASS: physics ray selects aimed host
+PASS: failed possession keeps soul and applies stun
+PASS: failed possession preserves host
+PASS: successful attempt reserves host
+PASS: possession completes into soldier
+PASS: claimed host counted once
+PASS: soldier lifetime and ammunition
+PASS: reload replenishes magazine
+PASS: incoming damage consumes body lifetime
+PASS: voluntary ejection resets soul
+PASS: voluntary ejection causes no explosion
+PASS: ejection completes to soul
+PASS: brute lifetime
+PASS: brute absorbs forty percent of damage
+PASS: brute melee hits nearby visible target
+PASS: expired body enters ejection
+PASS: expired body deals radial damage
+PASS: explosion returns to fresh soul
+PASS: pause stops lifetime
+PASS: pause rejects input
+PASS: soul expiration ends run
+PASS: outcome cannot be overwritten
+PASS: beyond six metre eye distance is rejected without RNG penalty
+PASS: soul attack uses real ray damage
+PASS: soldier telegraphs before shooting
+PASS: enemy ray can hit player collision layer
+PASS: one surviving host prevents early clear
+PASS: final host waits for transition
+PASS: final host possession clears room
+PASS: new run resets all state
+PASS: direct body transfer consumes previous host
+PASS: eliminating remaining enemies clears room
+PASS: visible head has collision coverage
+PASS: wall occludes host selection
+PASS: wall blocks player shot
+PASS: dead enemy cannot be targeted
+PASS: dead host cannot be reserved
+PASS: strafing dodges a telegraphed soldier shot
+PASS: non-authority cannot submit local state changes
+PASS: R returns to title with a fresh training room
+PASS: Escape pauses and releases mouse
+PASS: Escape resumes (mouse capture checked with a display)
+PASS: focus loss pauses safely
+SMOKE RESULT: 47 checks, 0 failures

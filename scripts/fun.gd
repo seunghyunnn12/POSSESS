@@ -1,7 +1,7 @@
 extends "res://scripts/action.gd"
 
 const Build = preload("res://scripts/fun_augments.gd")
-static var learned := false
+var learned := false
 var fun_mode := true
 var world
 var visited := [false, false, false]
@@ -33,7 +33,9 @@ func _ready() -> void:
 
 func start() -> void:
 	if running or not is_multiplayer_authority(): return
-	tutorial = not learned
+	tutorial = not learned and not get_tree().has_meta("fun_tutorial_seen")
+	get_tree().set_meta("fun_tutorial_seen", true)
+	learned = true
 	super.start()
 	enter_room(1)
 
@@ -86,6 +88,8 @@ func gain_xp(amount: int) -> void:
 		xp -= xp_next
 		level += 1
 		xp_next += 20
+	# Keep the existing automatic essence growth; XP never opens a combat menu.
+	essence = mini(10, level - 1)
 
 func resolve_flow() -> void:
 	if clear_pending and state in [State.Soul, State.Body]: finish("CLEAR")
@@ -177,7 +181,7 @@ func capture_chance(actor) -> float:
 	return 0.0 if actor.has_meta("fodder") else super.capture_chance(actor)
 
 func begin_possession(candidate) -> void:
-	if candidate.has_meta("fodder"): return
+	if not is_instance_valid(candidate) or candidate.has_meta("fodder"): return
 	super.begin_possession(candidate)
 
 func attempt_possession() -> void:

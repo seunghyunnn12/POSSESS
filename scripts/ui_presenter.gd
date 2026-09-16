@@ -162,6 +162,7 @@ func fun_snapshot(state: Dictionary) -> void:
 	state.fun = true
 	state.stage = "%d / 3" % a.room_index
 	state.enemies = str(a.remaining() + a.spawn_queue.size())
+	state.soul = "영혼 Lv.%d · 피해 +%d%% · %d/%d" % [a.level, a.essence * 3, a.xp, a.xp_next]
 	state.life = "%.1f / %.0f초" % [a.decay if state.body else a.soul, a.decay_max if state.body else 20.0]
 	if state.body and a.magazine_size() > 0: state.ammo = "%d / %d" % [a.ammo, a.magazine_size()]
 	state.visited = a.visited.duplicate()

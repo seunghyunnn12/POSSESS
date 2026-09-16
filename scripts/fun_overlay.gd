@@ -38,7 +38,7 @@ func present(state: Dictionary) -> void:
 		map_labels[i].modulate = Color("76e6cd") if state.room == i + 1 else Color("9aaeb8")
 	hint.text = ""
 	if state.tutorial:
-		hint.text = "[Tab] 건너뛰기\n" + ("좌클릭으로 앞의 병사를 약화하세요" if state.tutorial_step == 0 else "가까이 다가가 우클릭으로 빙의하세요")
+		hint.text = "[Tab] 건너뛰기\n" + ("WASD 이동 · 좌클릭으로 앞의 병사를 약화하세요" if state.tutorial_step == 0 else "가까이 다가가 우클릭으로 빙의하세요")
 	elif state.reward_ready:
 		hint.text = "[F] 증강 선택 · 문으로 걸어서 다음 방 이동"
 	if bindings != null: hint.text = bindings.hint(hint.text)
@@ -70,6 +70,7 @@ func _draw() -> void:
 	draw_rect(bar, Color("15232e"))
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(model.life_fraction, 0, 1), 12)), Color("e8a14b") if model.body else Color("70e6d0"))
 	for chunk in damage_chunks:
+		if not model.body: continue
 		draw_rect(Rect2(bar.position + Vector2(chunk.from * 240, 0), Vector2(maxf(0, chunk.to - chunk.from) * 240, 12)), Color(1, 0.15, 0.12, minf(1, chunk.left * 6)))
 	if direction_left > 0:
 		draw_arc(Vector2(640, 360), 280, angle - 0.22, angle + 0.22, 18, Color(1, 0.18, 0.12, direction_left / 0.6), 9, true)

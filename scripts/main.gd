@@ -40,6 +40,9 @@ func _ready() -> void:
 			run_seed = int(argument.trim_prefix("--seed="))
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	fun_run = (not ("--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args()) or "--fun" in OS.get_cmdline_user_args()) and guided_run and campaign_run and action_run
+	if fun_run:
+		if run_seed == 0: run_seed = randi_range(1, 999999)
+		DisplayServer.window_set_title("POSSESS — 연결된 방 3개")
 	arena = preload("res://scripts/fun_arena.gd").new() if fun_run else Arena.new()
 	arena.run_seed = run_seed
 	arena.layout = "training" if guided_run else "ossuary"
@@ -67,6 +70,7 @@ func _ready() -> void:
 	if fun_run:
 		authority.world = arena
 		arena.source = authority
+		if not records.entries.is_empty(): authority.learned = true
 	if authority is Action: authority.select_ghost(ghost_progress.selected, ghost_progress.unlocked)
 	authority.yaw = aim.x
 	authority.pitch = aim.y

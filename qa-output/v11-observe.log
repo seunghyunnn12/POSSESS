@@ -1,0 +1,17 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+CAPTURE state=2 life=45.0 tutorial=false
+STREAM live=15 queued=18
+ROOM 1 phase=rest queued=0 alive=0 choices=0
+OFFER ["pierce", "deepfreeze", "curse"]
+WALK position=(0.0, 0.000174, -14.81303) room=2 phase=combat life=24.2100000000005
+ROOM 2 phase=rest queued=0 alive=0 choices=0
+WALK position=(0.0, 0.000174, -9.193006) room=1 phase=rest life=17.8600000000006
+BACKTRACK cleared=[true, true, false] rewards=[true, false, false]
+SAFE SOUL before=20.0 after=20.0
+WALK position=(0.0, 0.000174, -14.883) room=2 phase=rest life=17.8600000000006
+WALK position=(0.0, 0.000174, -38.79967) room=3 phase=combat life=17.8600000000006
+ROOM 3 phase=rest queued=0 alive=0 choices=0
+WALK position=(0.0, 0.000174, -62.11945) room=3 phase=rest life=17.8600000000006
+END CLEAR kills=101 rooms=[true, true, true]
