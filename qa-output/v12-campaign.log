@@ -1,0 +1,73 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: seven-room expedition contains both boss milestones
+PASS: same seed reproduces rooms and quest
+PASS: different seed changes expedition
+PASS: skip practice still waits at first briefing
+PASS: journal pauses expedition
+PASS: journal cannot start hidden combat
+PASS: pair unlocks and records infiltration combo
+PASS: combo adds twelve points on top of mercy eight
+PASS: undying combo reduces host lifetime damage
+PASS: four occupied slots exclude new types from offers
+PASS: fifth distinct augment rejected at authority boundary
+PASS: reroll consumes one charge and offers unseen candidates first
+PASS: rebirth combo turns manual E into explosion
+PASS: third combo completion is recorded in its own build
+PASS: arrived at room 1
+PASS: room 1 ends in safe exploration
+PASS: route choice required before departure
+PASS: chosen danger-reward route changes next room
+PASS: arrived at room 2
+PASS: room does not finish before its reinforcements
+PASS: room 2 ends in safe exploration
+PASS: secret rune can be reached and aimed
+PASS: held interaction claims secret once
+PASS: secret cannot be farmed
+PASS: arrived at room 3
+PASS: boss spawned after multi-wave previous room
+PASS: healthy boss cannot be skipped by lucky possession
+PASS: direct reservation also respects boss threshold
+PASS: boss attack has readable advance warning
+PASS: journal freezes boss telegraph
+PASS: standing in resolved warning applies real damage
+PASS: moving outside telegraph radius avoids damage
+PASS: boss rage pattern matches role
+PASS: weakened boss becomes possessable
+PASS: summoned replacement bodies cannot farm experience
+PASS: room 3 ends in safe exploration
+PASS: route choice required before departure
+PASS: chosen danger-reward route changes next room
+PASS: arrived at room 4
+PASS: room does not finish before its reinforcements
+PASS: room 4 ends in safe exploration
+PASS: secret rune can be reached and aimed
+PASS: held interaction claims secret once
+PASS: secret cannot be farmed
+PASS: arrived at room 5
+PASS: room does not finish before its reinforcements
+PASS: room 5 ends in safe exploration
+PASS: route choice required before departure
+PASS: chosen danger-reward route changes next room
+PASS: arrived at room 6
+PASS: room does not finish before its reinforcements
+PASS: room 6 ends in safe exploration
+PASS: secret rune can be reached and aimed
+PASS: held interaction claims secret once
+PASS: secret cannot be farmed
+PASS: arrived at room 7
+PASS: boss spawned after multi-wave previous room
+PASS: healthy boss cannot be skipped by lucky possession
+PASS: direct reservation also respects boss threshold
+PASS: boss attack has readable advance warning
+PASS: journal freezes boss telegraph
+PASS: standing in resolved warning applies real damage
+PASS: moving outside telegraph radius avoids damage
+PASS: boss rage pattern matches role
+PASS: weakened boss becomes possessable
+PASS: summoned replacement bodies cannot farm experience
+PASS: room 7 ends in safe exploration
+PASS: final departure completes full expedition
+PASS: secrets award all unique relics without duplicates
+PASS: run quest completes through actual enemy rewards
+CAMPAIGN RESULT: 70 checks, 0 failures

@@ -3,6 +3,28 @@ extends Node
 var bank: Dictionary = {}
 var voices: Array[AudioStreamPlayer] = []
 var voice_index := 0
+var samples: Dictionary = {}
+var ambient: AudioStreamPlayer
+var footsteps: Array[AudioStreamPlayer3D] = []
+var step_index := 0
+const SAMPLE_PATH = "res://assets/sfx/"
+const LAYERS = {
+	"shot": "oga_100_v2/sfx100v2_air_01.ogg",
+	"rifle": "kenney_impact/Audio/impactMetal_heavy_000.ogg",
+	"shotgun": "kenney_impact/Audio/impactMetal_heavy_002.ogg",
+	"arrow": "oga_100_v2/sfx100v2_air_02.ogg",
+	"fire": "kenney_impact/Audio/impactSoft_heavy_001.ogg",
+	"storm": "kenney_impact/Audio/impactGlass_light_001.ogg",
+	"hit": "oga_100_v2/sfx100v2_hit_01.ogg",
+	"kill": "kenney_impact/Audio/impactBell_heavy_000.ogg",
+	"hurt": "kenney_impact/Audio/impactSoft_heavy_000.ogg",
+	"swing": "oga_100_v2/sfx100v2_air_03.ogg",
+	"melee": "kenney_impact/Audio/impactPunch_heavy_000.ogg",
+	"possess": "kenney_impact/Audio/impactGlass_light_000.ogg",
+	"inhabit": "kenney_impact/Audio/impactGlass_light_002.ogg",
+	"eject": "oga_100_v2/sfx100v2_hit_03.ogg",
+	"door": "oga_100_v2/sfx100v2_door_01.ogg"
+}
 var muted := false
 var next_hit_msec := 0
 var master_gain := 0.8:
@@ -11,7 +33,7 @@ var master_gain := 0.8:
 		for voice in voices: voice.volume_db = linear_to_db(master_gain) - 13.0
 
 func _ready() -> void:
-	for i in 12:
+	for i in 24:
 		var voice := AudioStreamPlayer.new()
 		voice.volume_db = -13.0
 		add_child(voice)
@@ -36,6 +58,18 @@ func _ready() -> void:
 	bank.dead = tone(0.7, 150, 30, 0.12)
 	bank.door = tone(0.65, 75, 30, 0.5)
 	bank.bell = bell_tone()
+	for key in LAYERS: samples[key] = load(SAMPLE_PATH + LAYERS[key])
+	ambient = AudioStreamPlayer.new()
+	ambient.stream = load(SAMPLE_PATH + "oga_100_v2/sfx100v2_loop_ambient_01.ogg").duplicate()
+	ambient.stream.loop = true
+	add_child(ambient)
+	for i in 4:
+		var step_voice := AudioStreamPlayer3D.new()
+		step_voice.stream = load(SAMPLE_PATH + "oga_100_v2/sfx100v2_footstep_wet_0%d.ogg" % (i % 3 + 1))
+		step_voice.max_distance = 12
+		step_voice.unit_size = 3
+		add_child(step_voice)
+		footsteps.append(step_voice)
 
 func bell_tone() -> AudioStreamWAV:
 	var data := PackedByteArray()
@@ -73,17 +107,40 @@ func tone(duration: float, start: float, end: float, noise: float) -> AudioStrea
 
 func play(key: String, volume: float = 0.0) -> void:
 	# Headless accelerated QA has no listener and outpaces the audio mixer.
-	if muted or DisplayServer.get_name() == "headless" or not bank.has(key):
+	if muted or DisplayServer.get_name() == "headless" or (not bank.has(key) and not samples.has(key)):
 		return
 	# A shotgun pellet or chain hit is not a separate full-volume voice.
 	if key == "hit":
 		var now := Time.get_ticks_msec()
 		if now < next_hit_msec: return
 		next_hit_msec = now + 45
+	if bank.has(key): play_stream(bank[key], volume - (4 if samples.has(key) else 0))
+	if samples.has(key): play_stream(samples[key], volume)
+
+func play_stream(stream: AudioStream, volume: float) -> void:
 	var voice := voices[voice_index % voices.size()]
 	voice_index += 1
-	voice.stream = bank[key]
-	voice.volume_db = -13.0 + volume + linear_to_db(master_gain)
+	voice.stream = stream
+	voice.pitch_scale = randf_range(0.95, 1.05)
+	voice.volume_db = -13.0 + volume + linear_to_db(maxf(master_gain, 0.0001))
+	voice.play()
+
+func crowd(count: int) -> void:
+	if ambient == null: return
+	if muted or count == 0 or DisplayServer.get_name() == "headless":
+		ambient.stop()
+		for voice in footsteps: voice.stop()
+		return
+	ambient.volume_db = -36.0 + minf(count, 12) * 0.5 + linear_to_db(maxf(master_gain, 0.0001))
+	if not ambient.playing: ambient.play()
+
+func step(at: Vector3, _listener: Vector3) -> void:
+	if muted or DisplayServer.get_name() == "headless": return
+	var voice := footsteps[step_index % footsteps.size()]
+	step_index += 1
+	voice.global_position = at
+	voice.volume_db = -15 + linear_to_db(maxf(master_gain, 0.0001))
+	voice.pitch_scale = randf_range(0.85, 1.15)
 	voice.play()
 
 func _exit_tree() -> void:

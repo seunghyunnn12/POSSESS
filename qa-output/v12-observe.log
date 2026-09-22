@@ -1,0 +1,8 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+MINION Walking_D_Skeletons speed=1.29999995231628
+HIT Hit_A
+RECOVER Walking_D_Skeletons
+DEATH Death_B visible=true
+CORPSE_VISIBLE false

@@ -53,8 +53,11 @@ func _ready() -> void:
 			actor.hp = 22
 			actor.visual = Node3D.new()
 			actor.add_child(actor.visual)
-			box(actor.visual, Vector3(0.55, 0.9, 0.45), Vector3(0, 0.7, 0), stone)
-			sphere(actor.visual, 0.24, Vector3(0, 1.4, 0), material(Color("cf6b57")))
+			var model = load(Visuals.MINION.path).instantiate()
+			model.scale = Vector3.ONE * Visuals.MINION.scale
+			actor.visual.add_child(model)
+			actor.animation = find_animation(model)
+			tint_minion(model)
 			actor.label = Label3D.new()
 			actor.add_child(actor.label)
 			add_child(actor)
@@ -91,6 +94,16 @@ func _process(_dt: float) -> void:
 	if source == null: return
 	for material in backgrounds:
 		material.set_shader_parameter("soul", 0.0 if source.state == 2 else 1.0)
+
+func tint_minion(node: Node) -> void:
+	if node is MeshInstance3D:
+		for surface in node.mesh.get_surface_count():
+			var original = node.get_active_material(surface)
+			if original is StandardMaterial3D:
+				var tinted = original.duplicate()
+				tinted.albedo_color = Color("89858b")
+				node.set_surface_override_material(surface, tinted)
+	for child in node.get_children(): tint_minion(child)
 
 func set_active(actor, active: bool) -> void:
 	actor.alive = active

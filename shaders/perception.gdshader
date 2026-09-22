@@ -17,6 +17,6 @@ void fragment() {
 	scene *= 1.0 - edge * (0.46 + soul * 0.18);
 	scene = mix(scene, vec3(0.24, 0.08, 0.20), edge * rot * (0.42 + 0.1 * sin(clock * 5.0)));
 	scene += vec3(0.5, 1.0, 0.82) * pulse * (0.16 + edge * 0.65);
-	scene += vec3(0.7, 0.055, 0.025) * pain * edge * 0.7;
+	scene += vec3(0.7, 0.055, 0.025) * pain * edge * 1.05;
 	COLOR = vec4(scene, 1.0);
 }
