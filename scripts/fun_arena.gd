@@ -1,36 +1,34 @@
 extends "res://scripts/arena.gd"
 
+const Expedition = preload("res://scripts/expedition.gd")
 var gates: Array = []
-var room_actors: Array = [[], [], []]
+var room_actors: Array = []
 var source
 var backgrounds: Array[ShaderMaterial] = []
+var background_soul := -1.0
 
 func _ready() -> void:
 	rolls.seed = run_seed if run_seed != 0 else Time.get_ticks_usec()
-	for room in 3:
-		var center: Vector3 = [Vector3.ZERO, Vector3(0, 0, -24), Vector3(22, 0, 0)][room]
+	for room in Expedition.CELLS.size():
+		room_actors.append([])
+		var center: Vector3 = Expedition.center(room + 1)
 		box(self, Vector3(22, 1, 24), center + Vector3(0, -0.5, 0), dark, true)
-		if room == 0:
-			wall(center + Vector3(-11, 0, 0), true)
-			door(Vector3(0, 0, -12), false, true)
-			door(Vector3(11, 0, 0), true, true)
-			door(Vector3(0, 0, 12), false, false)
-		elif room == 1:
-			wall(center + Vector3(-11, 0, 0), true)
-			wall(center + Vector3(11, 0, 0), true)
-			wall(center + Vector3(0, 0, -12), false)
-		else:
-			wall(center + Vector3(11, 0, 0), true)
-			wall(center + Vector3(0, 0, -12), false)
-			wall(center + Vector3(0, 0, 12), false)
-		light(center + Vector3(0, 5, 0), Color("b3c5d1"), 2.2, 16)
-		if room == 0: continue
+		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var neighbor: int = Expedition.CELLS.find(Expedition.CELLS[room] + direction) + 1
+			var connected := false
+			for edge in Expedition.LINKS:
+				if room + 1 in edge and neighbor in edge: connected = true
+			if room + 1 == Expedition.FINAL and direction == Vector2i.DOWN: continue
+			if connected or (neighbor > 0 and neighbor < room + 1): continue
+			wall(center + Vector3(direction.x * 11, 0, direction.y * 12), direction.x != 0)
+		light(center + Vector3(0, 5, 0), [Color("b3c5d1"), Color("b5c4b0"), Color("c4aec7")][Expedition.zone(room + 1) - 1], 2.2, 16)
+		if room + 1 in Expedition.HUBS: continue
 		for x in [-5, 5]:
-			box(self, Vector3(2, 1.1, 2), center + Vector3(x, 0.55, -2), stone, true)
+			box(self, Vector3(2, 1.1, 2), center + Vector3(x, 0.55, -2 if room % 2 == 1 else 2), stone, true)
 		for x in [-9, 9]:
 			for dz in [-7, 5]:
 				box(self, Vector3(1.5, 0.025, 1.5), center + Vector3(x, 0.025, dz), amber)
-		var roles := ["soldier", "shotgun", "brute", "mage"] if room == 1 else ["archer", "storm", "shotgun", "brute"]
+		var roles := ["soldier", "shotgun", "brute", "mage"] if room % 2 == 1 else ["archer", "storm", "shotgun", "brute"]
 		for i in range(roles.size() - 1, 0, -1):
 			var j := rolls.randi_range(0, i)
 			var saved = roles[i]
@@ -42,7 +40,7 @@ func _ready() -> void:
 			actor.set_meta("room", room + 1)
 			room_actors[room].append(actor)
 			set_active(actor, false)
-		for i in 30:
+		for i in (18 if room + 1 == Expedition.FINAL else 30 + (Expedition.zone(room + 1) - 1) * 4):
 			var actor := Actor.new()
 			actor.setup("soldier")
 			actor.set_meta("fodder", true)
@@ -64,21 +62,37 @@ func _ready() -> void:
 			enemies.append(actor)
 			room_actors[room].append(actor)
 			set_active(actor, false)
-	box(self, Vector3(8, 1, 8), Vector3(0, -0.5, 16), dark, true)
+		if room + 1 == Expedition.FINAL:
+			spawn("brute", center + Vector3(0, 0.05, 6), 4, "sovereign")
+			var boss = enemies[-1]
+			boss.visual.get_child(0).scale *= Visuals.BOSS_SCALE
+			boss.set_meta("room", room + 1)
+			room_actors[room].append(boss)
+			set_active(boss, false)
+	for edge in Expedition.LINKS:
+		var from: Vector3 = Expedition.center(edge[0])
+		var to: Vector3 = Expedition.center(edge[1])
+		var at := (from + to) * 0.5
+		var direction := (to - from).normalized()
+		door(at, direction.x != 0, not gates.size() in Expedition.LOCKS)
+		var angle := atan2(-direction.x, -direction.z)
+		door_label(Expedition.NAMES[edge[1] - 1], at - direction * 0.3 + Vector3.UP * 4.5, angle)
+		door_label(Expedition.NAMES[edge[0] - 1], at + direction * 0.3 + Vector3.UP * 4.5, angle + PI)
+	var exit_at := Expedition.center(Expedition.FINAL) + Vector3(0, 0, 12)
+	door(exit_at, false, false)
+	door_label("귀환", exit_at + Vector3(0, 4.5, -0.3), PI)
+	box(self, Vector3(8, 1, 8), exit_at + Vector3(0, -0.5, 4), dark, true)
 	for x in [-4, 4]:
-		box(self, Vector3(0.5, 7, 8), Vector3(x, 3.5, 16), stone, true)
-	box(self, Vector3(8, 7, 0.5), Vector3(0, 3.5, 20), stone, true)
-	var world := WorldEnvironment.new()
-	world.environment = Environment.new()
-	world.environment.background_mode = Environment.BG_COLOR
-	world.environment.background_color = Color("101923")
-	world.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	world.environment.ambient_light_color = Color("a5bacf")
-	world.environment.ambient_light_energy = 0.75
-	add_child(world)
-	door_label("회랑", Vector3(0, 4.5, -11.7), 0)
-	door_label("묘실", Vector3(10.7, 4.5, 0), -PI / 2)
-	door_label("귀환", Vector3(0, 4.5, 11.7), PI)
+		box(self, Vector3(0.5, 7, 8), exit_at + Vector3(x, 3.5, 4), stone, true)
+	box(self, Vector3(8, 7, 0.5), exit_at + Vector3(0, 3.5, 8), stone, true)
+	var environment := WorldEnvironment.new()
+	environment.environment = Environment.new()
+	environment.environment.background_mode = Environment.BG_COLOR
+	environment.environment.background_color = Color("101923")
+	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.environment.ambient_light_color = Color("a5bacf")
+	environment.environment.ambient_light_energy = 0.75
+	add_child(environment)
 	# Only static architecture is desaturated; actors and combat effects retain color.
 	for node in get_children():
 		if node is MeshInstance3D and node.material_override is StandardMaterial3D:
@@ -92,8 +106,11 @@ func _ready() -> void:
 
 func _process(_dt: float) -> void:
 	if source == null: return
+	var soul := 0.0 if source.state == 2 else 1.0
+	if soul == background_soul: return
+	background_soul = soul
 	for material in backgrounds:
-		material.set_shader_parameter("soul", 0.0 if source.state == 2 else 1.0)
+		material.set_shader_parameter("soul", soul)
 
 func tint_minion(node: Node) -> void:
 	if node is MeshInstance3D:
@@ -125,6 +142,7 @@ func door_label(text: String, at: Vector3, angle: float) -> void:
 	label.text = text
 	label.font = Visuals.THEME.default_font
 	label.font_size = 64
+	label.double_sided = false
 	label.pixel_size = 0.012
 	label.position = at
 	label.rotation.y = angle

@@ -1,0 +1,4 @@
+RX580 / 1280x720 / VSync disabled / 10 connected rooms loaded
+15 live enemies, refill to 20 fire projectiles + trails + repeated impact particles; invulnerable ghost; enemy HP held; 15 actors repositioned in view each frame, AI remains active; 10 impact bursts/sec
+Measured minimum enemies=15, projectiles=18
+Frames=4270 Mean=2.81ms p95=3.97ms p99=6.16ms

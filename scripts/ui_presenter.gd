@@ -160,7 +160,14 @@ func on_feedback(event: String, data: Dictionary) -> void:
 func fun_snapshot(state: Dictionary) -> void:
 	var a = authority
 	state.fun = true
-	state.stage = ["시작 방", "북쪽 회랑", "동쪽 묘실"][a.room_index - 1]
+	var expedition = preload("res://scripts/expedition.gd")
+	state.zone = expedition.zone(a.room_index)
+	state.stage = "%d / 3구역 · %s" % [state.zone, expedition.NAMES[a.room_index - 1]]
+	state.hub = a.room_index in expedition.HUBS
+	state.final_room = a.room_index == expedition.FINAL
+	var hub: int = expedition.HUBS[state.zone - 1]
+	state.zone_ready = a.cleared[hub] and a.cleared[hub + 1]
+	state.rewards = a.rewards.duplicate()
 	state.enemies = str(a.remaining() + a.spawn_queue.size())
 	state.soul = "영혼 Lv.%d · 피해 +%d%% · %d/%d" % [a.level, a.essence * 3, a.xp, a.xp_next]
 	state.life = "%.1f / %.0f초" % [a.decay if state.body else a.soul, a.decay_max if state.body else 20.0]

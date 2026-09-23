@@ -1,0 +1,78 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: room offers three special hosts and two baseline hosts
+PASS: common starts at fifteen percent
+PASS: special resistance reduces full-health chance
+PASS: weak special remains below common capture ceiling
+PASS: seer has stronger capture resistance
+PASS: resistance is applied after health weakening
+PASS: capture augment adds percentage points after resistance
+PASS: individual rolls stay within bounded variation
+PASS: same seed gives the same individual
+PASS: new body starts disguised
+PASS: swift body inherits speed and short lifetime
+PASS: same movement trait also applies to enemy
+PASS: swift reload modifier is effective
+PASS: current body keeps an independent immutable snapshot
+PASS: possession cancels pending enemy attacks
+PASS: possession cancels pending enemy attacks
+PASS: possession cancels pending enemy attacks
+PASS: possession cancels pending enemy attacks
+PASS: possession cancels pending enemy attacks
+PASS: ordinary enemy does not attack disguised ally
+PASS: empty magazine reload does not break disguise
+PASS: committed attack reveals body even if it misses
+PASS: body transfer restores disguise and replaces old trait
+PASS: previous host speed does not leak into next body
+PASS: failed hostile possession exposes but preserves old body
+PASS: seer telegraphs partial detection before alarm
+PASS: inspector freezes detection
+PASS: wall interrupts detection instead of revealing through walls
+PASS: completed detection exposes the disguised player
+PASS: inhabited seer grants eight percentage points of insight
+PASS: capture chance cannot exceed ninety-five percent
+PASS: seer body reveals nearby soul labels through walls
+PASS: soul insight ends on leaving seer body
+PASS: nearby aimed supply can be opened by a body
+PASS: supply requires a sustained hold
+PASS: menu freezes supply progress and decay together
+PASS: opening supply preserves disguise
+PASS: supply restores eight seconds while time still passes
+PASS: supply is consumed exactly once
+PASS: supply never exceeds host maximum lifetime
+PASS: attacking interrupts supply opening
+PASS: kill drops experience instead of granting distant XP
+PASS: host cannot reward twice through a different method
+PASS: nearby shard is collected once
+PASS: collected shard cannot reward again
+PASS: level-up cannot interrupt possession entry
+PASS: capture grants same common-host XP and preserves overflow
+PASS: level-up offers three distinct upgrades
+PASS: upgrade modal freezes combat and body lifetime
+PASS: upgrade modal also freezes imported animation
+PASS: upgrade modal rejects gameplay input
+PASS: Escape opens inspector on top of upgrade choice
+PASS: inspector cannot accidentally select a hidden card
+PASS: leaving inspector returns to mandatory choice
+PASS: invalid choice indices do not consume a level
+PASS: number key selects offered upgrade and resumes
+PASS: choice input cannot fire and break disguise
+PASS: repeated stale selection cannot apply upgrade twice
+PASS: lifetime augment preserves remaining fraction instead of full healing
+PASS: first betrayal bonus applies to actual first shot
+PASS: later shots do not repeat first betrayal bonus
+PASS: decay damage boost matches current inspector stats
+PASS: soul upgrades persist across different host kinds
+PASS: final kill collects remaining XP before clear
+PASS: multiple gained levels preserve all XP and choices
+PASS: queued upgrade choices complete before room clear
+PASS: offers respect two-rank maximum
+PASS: last explosion finishes before level-up modal
+PASS: explosion XP opens choice after soul return
+PASS: last explosion resolves choice and clear without deadlock
+PASS: new run resets traits, growth, supply and body snapshot
+PASS: non-authority cannot choose or mutate upgrades
+PASS: resized viewport click chooses the intended card
+PASS: click through inspector cannot select underlying card
+PASS: fully upgraded run cannot get trapped in an empty choice modal
+EVOLUTION RESULT: 75 checks, 0 failures

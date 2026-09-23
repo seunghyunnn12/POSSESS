@@ -43,7 +43,7 @@ func _ready() -> void:
 	if fun_run:
 		if run_seed == 0: run_seed = randi_range(1, 999999)
 		aim = Vector2(-0.55, -0.02)
-		DisplayServer.window_set_title("POSSESS — 시작 방 · 두 갈래 탐험")
+		DisplayServer.window_set_title("POSSESS — 지하 원정 · 3구역")
 	arena = preload("res://scripts/fun_arena.gd").new() if fun_run else Arena.new()
 	arena.run_seed = run_seed
 	arena.layout = "training" if guided_run else "ossuary"

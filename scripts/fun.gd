@@ -1,12 +1,13 @@
 extends "res://scripts/action.gd"
 
+const Expedition = preload("res://scripts/expedition.gd")
 const Build = preload("res://scripts/fun_augments.gd")
 var learned := false
 var fun_mode := true
 var world
-var visited := [false, false, false]
-var cleared := [true, false, false]
-var rewards := [true, false, false]
+var visited: Array = []
+var cleared: Array = []
+var rewards: Array = []
 var spawn_queue: Array = []
 var spawn_clock := 0.0
 var tutorial := false
@@ -21,7 +22,12 @@ var hitstop_cooldown := 0.0
 
 func _ready() -> void:
 	super._ready()
-	room_total = 3
+	room_total = Expedition.CELLS.size()
+	for room in range(1, room_total + 1):
+		visited.append(false)
+		cleared.append(room in Expedition.HUBS)
+		rewards.append(room in Expedition.HUBS or room == Expedition.FINAL)
+	while plans.size() <= room_total: plans.append(plans[1].duplicate(true))
 	room_index = 1
 	phase = "rest"
 	rerolls = 0
@@ -47,12 +53,12 @@ func skip_training() -> void:
 	activate_hosts()
 
 func enter_room(index: int) -> void:
-	if not is_multiplayer_authority() or index < 1 or index > 3: return
+	if not is_multiplayer_authority() or index < 1 or index > room_total: return
 	room_index = index
 	actors = world.room_actors[index - 1]
 	phase = "rest" if cleared[index - 1] else "combat"
-	if index == 1:
-		visited[0] = true
+	if index in Expedition.HUBS:
+		visited[index - 1] = true
 		spawn_queue.clear()
 		return
 	if visited[index - 1]: return
@@ -60,15 +66,17 @@ func enter_room(index: int) -> void:
 	spawn_queue = actors.filter(func(a): return a.has_meta("fodder"))
 	spawn_clock = 2.0
 	activate_hosts()
-	world.gate(index - 2, false)
+	refresh_gates()
+	boss_clock = 3.0
+	boss_pattern = 0
 	clear_pending = false
 	invulnerable = maxf(invulnerable, 1)
 
 func activate_hosts() -> void:
-	if room_index == 1: return
-	for i in 4:
-		if tutorial and i > 0: continue
-		var actor = actors[i]
+	if room_index in Expedition.HUBS: return
+	for actor in actors:
+		if actor.has_meta("fodder"): continue
+		if tutorial and actor != actors[0]: continue
 		if not actor.claimed and not actor.rewarded:
 			world.set_active(actor, true)
 
@@ -108,12 +116,11 @@ func finish(result: String) -> void:
 	if result == "CLEAR":
 		phase = "rest"
 		cleared[room_index - 1] = true
-		# Whichever branch is explored first supplies the next fight's augment.
-		if cleared[1] and cleared[2]: rewards[room_index - 1] = true
+		if room_index == Expedition.FINAL: bosses_defeated = 1
 		clear_pending = false
 		projectiles.clear()
-		world.gate(room_index - 2, true)
-		world.gate(2, cleared[1] and cleared[2])
+		hazards.clear()
+		refresh_gates()
 		feedback.emit("room_clear", {"index": room_index})
 		return
 	if death_reason.is_empty():
@@ -146,6 +153,9 @@ func available_augments() -> Array[String]:
 func open_reward() -> void:
 	if not is_multiplayer_authority() or not running or outcome != "" or is_frozen() or phase != "rest" or rewards[room_index - 1]: return
 	var pool := available_augments()
+	if pool.is_empty():
+		rewards[room_index - 1] = true
+		return
 	var family := Build.family(body_kind if state == State.Body else last_body)
 	for category in [0, 1, 2]:
 		var candidates: Array[String] = []
@@ -237,6 +247,8 @@ func tick_enemy(actor, dt: float) -> void:
 	damage_source = "굶주린 것의 근접 공격" if actor.has_meta("fodder") else Weapons.info(actor.kind).name + "의 공격"
 	if not actor.has_meta("fodder"):
 		if tutorial: return
+		# This floor owns a finite stream of reinforcements at local room positions.
+		if actor.profile.get("boss", false): summon_clock = 10000.0
 		super.tick_enemy(actor, dt)
 		return
 	if actor.stagger_left > 0: return
@@ -285,17 +297,29 @@ func _physics_process(dt: float) -> void:
 	super._physics_process(dt)
 	if phase == "rest":
 		if intent.interact: open_reward()
-		var next := room_index
-		if room_index == 1:
-			if player.position.z < -13: next = 2
-			elif player.position.x > 12: next = 3
-		elif room_index == 2 and player.position.z > -11: next = 1
-		elif room_index == 3 and player.position.x < 10: next = 1
-		if next != room_index:
-			enter_room(next)
-		if room_index == 1 and cleared[1] and cleared[2] and player.position.z > 15:
+		if is_frozen(): return
+		for edge_index in Expedition.LINKS.size():
+			var edge: Array = Expedition.LINKS[edge_index]
+			if not room_index in edge or world.gates[edge_index].visible: continue
+			var next: int = edge[1] if room_index == edge[0] else edge[0]
+			var from: Vector3 = Expedition.center(room_index)
+			var to: Vector3 = Expedition.center(next)
+			var direction := (to - from).normalized()
+			var midpoint := (from + to) * 0.5
+			var offset: Vector3 = player.position - midpoint
+			if offset.dot(direction) > 1.0 and absf(offset.dot(Vector3(-direction.z, 0, direction.x))) < 3.0:
+				enter_room(next)
+				break
+		if room_index == Expedition.FINAL and cleared[-1] and player.position.z > Expedition.center(Expedition.FINAL).z + 15:
 			outcome = "CLEAR"
 			focus_left = 0
 			Engine.time_scale = 1
 			clear_input()
 			feedback.emit("end", {"result": outcome})
+
+func refresh_gates() -> void:
+	for i in Expedition.LINKS.size():
+		var edge: Array = Expedition.LINKS[i]
+		var fighting_here: bool = phase == "combat" and room_index in edge
+		world.gate(i, not fighting_here and Expedition.unlocked(i, cleared))
+	world.gate(Expedition.LINKS.size(), cleared[-1])

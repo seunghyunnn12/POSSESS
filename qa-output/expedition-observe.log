@@ -1,0 +1,55 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 22.20.27.09.230330 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon RX 580 2048SP
+
+PASS safe start, connected ten-room floor
+PASS physical walk (22.0, 0.0)
+PASS enter selected branch 3
+PASS finite stream clears room 3
+PASS three usable augment choices
+PASS physical walk (0.0, 0.0)
+PASS branch clear does not end run
+PASS physical walk (0.0, -24.0)
+PASS enter selected branch 2
+PASS finite stream clears room 2
+PASS three usable augment choices
+PASS physical walk (0.0, 0.0)
+PASS branch clear does not end run
+PASS both branch rewards remain available
+PASS physical walk (0.0, 24.0)
+PASS zone traversal retains body ammo build and consumes decay
+PASS physical walk (-22.0, 24.0)
+PASS enter selected branch 5
+PASS finite stream clears room 5
+PASS three usable augment choices
+PASS physical walk (0.0, 24.0)
+PASS branch clear does not end run
+PASS physical walk (22.0, 24.0)
+PASS enter selected branch 6
+PASS finite stream clears room 6
+PASS three usable augment choices
+PASS physical walk (0.0, 24.0)
+PASS branch clear does not end run
+PASS both branch rewards remain available
+PASS physical walk (0.0, 48.0)
+PASS zone traversal retains body ammo build and consumes decay
+PASS physical walk (22.0, 48.0)
+PASS enter selected branch 9
+PASS finite stream clears room 9
+PASS three usable augment choices
+PASS physical walk (0.0, 48.0)
+PASS branch clear does not end run
+PASS physical walk (-22.0, 48.0)
+PASS enter selected branch 8
+PASS finite stream clears room 8
+PASS three usable augment choices
+PASS physical walk (0.0, 48.0)
+PASS branch clear does not end run
+PASS both branch rewards remain available
+PASS physical walk (0.0, 72.0)
+PASS zone traversal retains body ammo build and consumes decay
+PASS final room contains existing sovereign boss
+PASS finite stream clears room 10
+PASS boss clear opens physical return door
+PASS physical walk (0.0, 87.5)
+PASS only final exit completes expedition
+EXPEDITION failures=0

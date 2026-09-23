@@ -110,6 +110,7 @@ func _process(dt: float) -> void:
 	# Corpses can remain in the previous room while the player crosses a door.
 	var animated_actors: Array = authority.world.enemies if authority.get("fun_mode") == true else authority.actors
 	for actor in animated_actors:
+		if not actor.visible: continue
 		if actor.animation != null:
 			var distant: bool = actor.alive and actor.global_position.distance_squared_to(camera.global_position) > 144.0
 			actor.animation.speed_scale = 0.0 if authority.animation_frozen() or distant else (1.3 if actor.has_meta("fodder") and actor.animation_state == "walk" else 1.0)
