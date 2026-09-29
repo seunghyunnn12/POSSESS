@@ -64,6 +64,7 @@ func enter_room(index: int) -> void:
 	if not is_multiplayer_authority() or index < 1 or index > room_total: return
 	room_index = index
 	actors = world.room_actors[index - 1]
+	if world.has_method("set_zone"): world.set_zone(Expedition.zone(index))
 	phase = "rest" if cleared[index - 1] else "combat"
 	if index in Expedition.HUBS or index in Expedition.SPECIAL:
 		visited[index - 1] = true

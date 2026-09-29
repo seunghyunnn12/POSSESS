@@ -1,6 +1,12 @@
 extends "res://scripts/arena.gd"
 
 const Expedition = preload("res://scripts/expedition.gd")
+const Dresser = preload("res://scripts/dungeon_dresser.gd")
+var dresser
+var environment_res: Environment
+var mood_tween: Tween
+var clock := 0.0
+var door_trim := material(Color("3aa88a"), 0.35)
 var gates: Array = []
 var seals: Array = []
 var potion: MeshInstance3D
@@ -11,10 +17,19 @@ var background_soul := -1.0
 
 func _ready() -> void:
 	rolls.seed = run_seed if run_seed != 0 else Time.get_ticks_usec()
+	dresser = Dresser.new(self, rolls.seed + 77)
 	for room in Expedition.CELLS.size():
 		room_actors.append([])
 		var center: Vector3 = Expedition.center(room + 1)
 		box(self, Vector3(22, 1, 24), center + Vector3(0, -0.5, 0), dark, true)
+		var doors: Array = []
+		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var other: int = Expedition.CELLS.find(Expedition.CELLS[room] + direction) + 1
+			for edge in Expedition.LINKS:
+				if room + 1 in edge and other in edge: doors.append(direction)
+		if room + 1 == Expedition.FINAL: doors.append(Vector2i.DOWN)
+		var kind := "hub" if room + 1 in Expedition.HUBS else ("treasure" if room + 1 == Expedition.TREASURE else ("morgue" if room + 1 == Expedition.MORGUE else "combat"))
+		dresser.dress_room(center, doors, Expedition.zone(room + 1), kind)
 		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 			var neighbor: int = Expedition.CELLS.find(Expedition.CELLS[room] + direction) + 1
 			var connected := false
@@ -32,10 +47,12 @@ func _ready() -> void:
 			continue
 		if room + 1 in Expedition.HUBS: continue
 		for x in [-5, 5]:
-			box(self, Vector3(2, 1.1, 2), center + Vector3(x, 0.55, -2 if room % 2 == 1 else 2), stone, true)
+			var cover := box(self, Vector3(2, 1.1, 2), center + Vector3(x, 0.55, -2 if room % 2 == 1 else 2), stone, true)
+			cover.visible = false
+			dresser.spooky("coffin_decorated" if x < 0 else "coffin", cover.position - Vector3.UP * 0.55, PI * 0.5 * (room % 2), Vector3(1.0, 0.85, 0.68))
 		for x in [-9, 9]:
 			for dz in [-7, 5]:
-				box(self, Vector3(1.5, 0.025, 1.5), center + Vector3(x, 0.025, dz), amber)
+				dresser.dungeon("floor_tile_grate_open", center + Vector3(x, 0.01, dz), 0.0, Vector3(0.75, 1.0, 0.75))
 		var roles := ["soldier", "shotgun", "brute", "mage"] if room % 2 == 1 else ["archer", "storm", "shotgun", "brute"]
 		for i in range(roles.size() - 1, 0, -1):
 			var j := rolls.randi_range(0, i)
@@ -95,32 +112,68 @@ func _ready() -> void:
 		box(self, Vector3(0.5, 7, 8), exit_at + Vector3(x, 3.5, 4), stone, true)
 	box(self, Vector3(8, 7, 0.5), exit_at + Vector3(0, 3.5, 8), stone, true)
 	var environment := WorldEnvironment.new()
-	environment.environment = Environment.new()
-	environment.environment.background_mode = Environment.BG_COLOR
-	environment.environment.background_color = Color("101923")
-	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.environment.ambient_light_color = Color("a5bacf")
-	environment.environment.ambient_light_energy = 0.75
+	environment_res = Environment.new()
+	var env := environment_res
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color("06090d")
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color("7f97ad")
+	env.ambient_light_energy = 0.55
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 1.05
+	env.glow_enabled = true
+	env.glow_intensity = 0.7
+	env.glow_bloom = 0.08
+	env.glow_hdr_threshold = 0.9
+	env.ssao_enabled = true
+	env.ssao_radius = 1.4
+	env.ssao_intensity = 2.2
+	env.volumetric_fog_enabled = true
+	env.volumetric_fog_density = 0.028
+	env.volumetric_fog_albedo = Color("5d7c93")
+	env.volumetric_fog_emission = Color("0b1218")
+	env.volumetric_fog_emission_energy = 0.4
+	env.volumetric_fog_length = 48.0
+	env.volumetric_fog_ambient_inject = 0.35
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.08
+	env.adjustment_saturation = 0.95
+	environment.environment = env
 	add_child(environment)
 	# Only static architecture is desaturated; actors and combat effects retain color.
 	for node in get_children():
 		if node.has_meta("keep_material"): continue
 		if node is MeshInstance3D and node.material_override is StandardMaterial3D:
+			var masonry: bool = node.material_override == stone or node.material_override == dark
 			var material := ShaderMaterial.new()
 			material.shader = preload("res://shaders/fun_background.gdshader")
-			material.set_shader_parameter("base_color", node.material_override.albedo_color)
+			material.set_shader_parameter("pattern", 1 if masonry else 0)
+			material.set_shader_parameter("base_color", (Color("5b636b") if node.material_override == stone else Color("474b50")) if masonry else node.material_override.albedo_color)
 			if node.material_override.emission_enabled:
 				material.set_shader_parameter("glow_color", node.material_override.emission * node.material_override.emission_energy_multiplier)
 			node.material_override = material
 			backgrounds.append(material)
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	clock += dt
+	if dresser != null: dresser.tick(clock)
 	if source == null: return
 	var soul := 0.0 if source.state == 2 else 1.0
 	if soul == background_soul: return
 	background_soul = soul
 	for material in backgrounds:
 		material.set_shader_parameter("soul", soul)
+
+## Retint fog and ambient light for the zone the player is standing in.
+func set_zone(zone: int) -> void:
+	if environment_res == null: return
+	var mood: Array = Dresser.mood(zone)
+	if mood_tween != null and mood_tween.is_valid(): mood_tween.kill()
+	mood_tween = create_tween().set_parallel(true)
+	mood_tween.tween_property(environment_res, "volumetric_fog_albedo", mood[0], 1.5)
+	mood_tween.tween_property(environment_res, "volumetric_fog_density", mood[1], 1.5)
+	mood_tween.tween_property(environment_res, "ambient_light_color", mood[2], 1.5)
+	mood_tween.tween_property(environment_res, "ambient_light_energy", mood[3], 1.5)
 
 func tint_minion(node: Node) -> void:
 	if node is MeshInstance3D:
@@ -166,9 +219,11 @@ func ward_material() -> StandardMaterial3D:
 
 func build_treasure(center: Vector3) -> void:
 	var gold := material(Color("e6b24f"), 1.4)
-	box(self, Vector3(1.6, 1.0, 1.6), center + Vector3(0, 0.5, 0), brass, true)
-	box(self, Vector3(0.9, 0.12, 0.9), center + Vector3(0, 1.06, 0), gold)
-	var relic := box(self, Vector3(0.36, 0.36, 0.36), center + Vector3(0, 1.45, 0), gold)
+	box(self, Vector3(2.2, 0.5, 2.0), center + Vector3(0, 0.25, 0), stone, true)
+	dresser.dungeon("chest_gold", center + Vector3(0, 0.5, 0), PI * 0.5, Vector3.ONE * 1.1)
+	for spot in [Vector3(-1.9, 0, 1.2), Vector3(1.8, 0, -1.3), Vector3(-1.4, 0, -1.8)]:
+		dresser.dungeon("coin_stack_large" if spot.x < 0 else "coin_stack_medium", center + spot, randf() * TAU, Vector3.ONE * 0.8)
+	var relic := box(self, Vector3(0.36, 0.36, 0.36), center + Vector3(0, 2.4, 0), gold)
 	relic.rotation = Vector3(PI * 0.25, PI * 0.25, 0)
 	relic.set_meta("keep_material", true)
 	light(center + Vector3(0, 2.6, 0), Color("ffcf73"), 2.6, 9)
@@ -187,8 +242,11 @@ func build_morgue(center: Vector3, room: int) -> void:
 	for i in 3:
 		var slot := center + Vector3(7.2, 0, [-5.5, 0.0, 5.5][i])
 		# Upright coffin behind each preserved body.
-		box(self, Vector3(0.4, 3.0, 1.6), slot + Vector3(1.3, 1.5, 0), dark, true)
-		box(self, Vector3(0.15, 3.1, 1.75), slot + Vector3(1.05, 1.55, 0), brass)
+		box(self, Vector3(0.6, 3.0, 2.0), slot + Vector3(1.5, 1.5, 0), dark, true).visible = false
+		# Stand the coffin on end (pitch) and turn its lid toward the room (yaw); Godot applies Y*X*Z.
+		var coffin: Node3D = dresser.spooky("coffin_decorated", slot + Vector3(1.55, 1.5, 0))
+		if coffin != null: coffin.rotation = Vector3(PI * 0.5, -PI * 0.5, 0)
+		dresser.spooky("candle_triple" if i != 1 else "skull_candle", slot + Vector3(0.9, 0, 1.3), 0.0, Vector3.ONE * 0.9)
 		spawn(kinds[i], slot + Vector3(0, 0.05, 0), 999, "preserved")
 		var actor = enemies[-1]
 		actor.rotation.y = -PI * 0.5
@@ -234,4 +292,4 @@ func door(at: Vector3, sideways: bool, opened: bool) -> void:
 	seals.append(ward)
 	seal(seals.size() - 1, false)
 	for side in [-1, 1]:
-		box(self, Vector3(0.12, 5, 0.12), at + Vector3(0 if sideways else side * 2.92, 2.5, side * 2.92 if sideways else 0), mint)
+		box(self, Vector3(0.12, 5, 0.12), at + Vector3(0 if sideways else side * 2.92, 2.5, side * 2.92 if sideways else 0), door_trim)
