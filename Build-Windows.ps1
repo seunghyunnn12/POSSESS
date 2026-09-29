@@ -24,6 +24,8 @@ Copy-Item -LiteralPath assets/characters/skeletons/LICENSE.txt -Destination "$Ou
 Copy-Item -LiteralPath assets/characters/adventurers/LICENSE.txt -Destination "$OutputDirectory/ADVENTURERS-LICENSE.txt"
 Copy-Item -LiteralPath WINDOWS-README.txt -Destination "$OutputDirectory/README.txt"
 Copy-Item -LiteralPath PLAYTEST-FEEDBACK.txt -Destination "$OutputDirectory/PLAYTEST-FEEDBACK.txt"
+Copy-Item -LiteralPath assets/fonts/OFL-GowunBatang.txt -Destination "$OutputDirectory/FONT-GOWUNBATANG-LICENSE.txt"
+Copy-Item -LiteralPath assets/fonts/OFL-IMFell.txt -Destination "$OutputDirectory/FONT-IMFELL-LICENSE.txt"
 Copy-Item -LiteralPath assets/env/dungeon/LICENSE.txt -Destination "$OutputDirectory/DUNGEON-LICENSE.txt"
 Copy-Item -LiteralPath assets/env/halloween/LICENSE.txt -Destination "$OutputDirectory/HALLOWEEN-LICENSE.txt"
 Copy-Item -LiteralPath assets/sfx/kenney_impact/License.txt -Destination "$OutputDirectory/SFX-KENNEY-LICENSE.txt"

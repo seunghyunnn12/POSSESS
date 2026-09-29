@@ -1,4 +1,4 @@
-POSSESS 0.17 — 플레이테스트 빌드
+POSSESS 0.18 — 플레이테스트 빌드
 
 ■ 실행
 ZIP을 폴더에 풀고 POSSESS.exe를 실행하세요.

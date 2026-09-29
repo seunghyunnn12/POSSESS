@@ -108,6 +108,7 @@ func _ready() -> void:
 		hud.canvas.add_child(overlay)
 		ui_presenter.snapshot_changed.connect(overlay.present)
 		hud.screens.hud.get_node("Host/LifeBar").hide()
+		hud.cinematic_title()
 	hud.bindings = settings.bindings
 	hud.records = records
 	hud.screens.pause.get_node("Controls/Keys").hide()
@@ -126,6 +127,13 @@ func _ready() -> void:
 
 func begin() -> void:
 	authority.paused = false
+	if fun_run and not authority.running:
+		# Leave the title's drifting camera spot and start at the room's entrance.
+		player.position = Vector3(0, 0.05, 5)
+		player.velocity = Vector3.ZERO
+		aim = Vector2(-0.55, -0.02)
+		authority.yaw = aim.x
+		authority.pitch = aim.y
 	authority.start()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -170,6 +178,18 @@ func _ui_key(code: int) -> void:
 	event.physical_keycode = code
 	event.pressed = true
 	_unhandled_input(event)
+
+var title_clock := 0.0
+
+## Before the run starts, the camera drifts slowly around the start room behind the title.
+func _process(dt: float) -> void:
+	if not fun_run or authority == null or authority.running: return
+	title_clock += dt
+	# From a back corner, look diagonally across the room toward the far torches.
+	aim = Vector2(-0.75 + sin(title_clock * 0.11) * 0.28, -0.02 + sin(title_clock * 0.07) * 0.03)
+	authority.yaw = aim.x
+	authority.pitch = aim.y
+	player.position = Vector3(-7.0 + sin(title_clock * 0.05) * 1.2, 0.05, 8.5)
 
 func _physics_process(_dt: float) -> void:
 	if guided_run and authority.phase == "training" and is_instance_valid(arena.practice_marker):

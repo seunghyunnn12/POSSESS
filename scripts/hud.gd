@@ -23,6 +23,13 @@ var art_key := ""
 var bindings
 var records
 var passage
+var cinematic := false
+
+## Expedition mode: borderless title over the live dungeon.
+func cinematic_title() -> void:
+	cinematic = true
+	preload("res://scripts/screen_style.gd").apply(self)
+	preload("res://scripts/title_style.gd").apply(screens.title)
 
 func _ready() -> void:
 	theme = THEME
@@ -97,7 +104,8 @@ func present(state: Dictionary) -> void:
 	passage.visible = state.phase == "travel" and modal != "pause"
 	if passage.visible: passage.present(state.passage_index, bindings)
 	screens.title.get_node("GhostSelection").visible = state.get("ghost_selection", false)
-	screens.title.get_node("KeyArt").visible = not state.get("ghost_selection", false)
+	screens.title.get_node("KeyArt").visible = not state.get("ghost_selection", false) and not cinematic
+	if cinematic: preload("res://scripts/title_style.gd").reflow.call_deferred(screens.title)
 	var next_art_key := str([state.kind, state.body, state.choices, state.get("ghost_id", "wanderer")])
 	if next_art_key != art_key:
 		art_key = next_art_key
@@ -161,7 +169,7 @@ func present(state: Dictionary) -> void:
 	if state.get("fun", false):
 		put("hud", "Host/Caption", "몸 수명 · 자연 부패 중" if state.body else ("유령 · 전투 시간" if state.phase == "combat" else "유령 · 시간 정지"))
 		if modal == "title":
-			put("title", "Footer", "0.17 플레이테스트 · 매 판 새로 만들어지는 3구역")
+			put("title", "Footer", "0.18 플레이테스트 · 매 판 새로 만들어지는 3구역")
 			put("title", "Subtitle", "세 구역을 탐험하고 군주의 무덤으로 향하세요." if state.outcome == "" else ("군주의 무덤을 넘어 원정에서 돌아왔습니다" if state.outcome == "CLEAR" else state.death_reason))
 			put("title", "Description", "좌클릭 공격 · 우클릭 빙의 · E 몸에서 나오기 · Shift 회피\nF 상호작용 · R 재장전 · Esc 일시정지 · 몸이 썩기 전에 갈아타세요" if state.outcome == "" else state.end_stats)
 		if modal == "augment":

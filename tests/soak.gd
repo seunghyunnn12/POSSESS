@@ -104,6 +104,12 @@ func run_seed(seed_value: int) -> void:
 			check(false, "seed %d: died unexpectedly in %s" % [seed_value, kind])
 			return
 		take_rewards()
+		# Open and close the pause screen in every room so its panels render live data.
+		key(KEY_ESCAPE)
+		game.ui_presenter.refresh()
+		await process_frame
+		key(KEY_ESCAPE)
+		game.ui_presenter.refresh()
 		if kind == "morgue":
 			sim.coins += 60
 			var wares: Array = sim.actors.filter(func(a): return a.has_meta("price"))

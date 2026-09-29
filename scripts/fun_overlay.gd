@@ -92,7 +92,7 @@ func present(state: Dictionary) -> void:
 	elif state.kind == "boss" and state.cleared[state.room - 1]:
 		hint.text = "보스를 쓰러뜨렸습니다 · 아래쪽 문으로 다음 구역에 내려가세요"
 	if bindings != null: hint.text = bindings.hint(hint.text)
-	status.text = "열쇠 %d   ·   뼈 동전 %d   ·   유물 %d" % [state.get("keys", 0), state.get("coins", 0), state.get("relics", 0)]
+	status.text = "열쇠 %d   ·   뼈 동전 %d   ·   유물 %d" % [state.get("keys", 0), state.get("coins", 0), state.get("relic_count", 0)]
 	queue_redraw()
 
 func revealed(room: int) -> bool:
@@ -126,7 +126,7 @@ func _draw() -> void:
 		if map_labels[a - 1].visible and map_labels[b - 1].visible:
 			draw_line(map_positions[a - 1] + CELL * 0.5, map_positions[b - 1] + CELL * 0.5, Color("76e6cd"), 2)
 	for i in map_labels.size():
-		if map_labels[i].visible: draw_rect(Rect2(map_positions[i], CELL), Color("1b303b"))
+		if map_labels[i].visible: draw_rect(Rect2(map_positions[i], CELL), Color(0.03, 0.04, 0.05, 0.6))
 	var bar := Rect2(140, 674, 240, 12)
 	draw_rect(bar, Color("15232e"))
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(model.life_fraction, 0, 1), 12)), Color("e8a14b") if model.body else Color("70e6d0"))

@@ -185,7 +185,7 @@ func fun_snapshot(state: Dictionary) -> void:
 	state.treasure = state.kind == "treasure"
 	state.morgue = state.kind == "morgue"
 	state.potion_used = a.used_potions.has(a.room_index)
-	state.relics = a.relics.size()
+	state.relic_count = a.relics.size()
 	var hint: String = a.context_hint()
 	if hint != "" and state.interaction == "": state.interaction = hint
 	var aimed = a.aimed_actor()

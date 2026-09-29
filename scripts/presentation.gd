@@ -184,7 +184,7 @@ func _process(dt: float) -> void:
 			if not ids.has(id):
 				projectile_visuals[id].queue_free()
 				projectile_visuals.erase(id)
-	hands.visible = authority.state != Authority.State.Possessing
+	hands.visible = authority.state != Authority.State.Possessing and ((authority.running and authority.outcome == "") or authority.get("fun_mode") != true)
 	if authority.state == Authority.State.Possessing:
 		pulse = maxf(pulse, 0.75)
 	pulse = move_toward(pulse, 0.0, dt * 2.6)
