@@ -2,6 +2,8 @@ extends "res://scripts/arena.gd"
 
 const Expedition = preload("res://scripts/expedition.gd")
 var gates: Array = []
+var seals: Array = []
+var potion: MeshInstance3D
 var room_actors: Array = []
 var source
 var backgrounds: Array[ShaderMaterial] = []
@@ -22,6 +24,12 @@ func _ready() -> void:
 			if connected or (neighbor > 0 and neighbor < room + 1): continue
 			wall(center + Vector3(direction.x * 11, 0, direction.y * 12), direction.x != 0)
 		light(center + Vector3(0, 5, 0), [Color("b3c5d1"), Color("b5c4b0"), Color("c4aec7")][Expedition.zone(room + 1) - 1], 2.2, 16)
+		if room + 1 == Expedition.TREASURE:
+			build_treasure(center)
+			continue
+		if room + 1 == Expedition.MORGUE:
+			build_morgue(center, room)
+			continue
 		if room + 1 in Expedition.HUBS: continue
 		for x in [-5, 5]:
 			box(self, Vector3(2, 1.1, 2), center + Vector3(x, 0.55, -2 if room % 2 == 1 else 2), stone, true)
@@ -74,9 +82,10 @@ func _ready() -> void:
 		var to: Vector3 = Expedition.center(edge[1])
 		var at := (from + to) * 0.5
 		var direction := (to - from).normalized()
-		door(at, direction.x != 0, not gates.size() in Expedition.LOCKS)
+		var key_door: bool = gates.size() in Expedition.KEY_DOORS
+		door(at, direction.x != 0, not gates.size() in Expedition.LOCKS and not key_door)
 		var angle := atan2(-direction.x, -direction.z)
-		door_label(Expedition.NAMES[edge[1] - 1], at - direction * 0.3 + Vector3.UP * 4.5, angle)
+		door_label(Expedition.NAMES[edge[1] - 1] + ("\n열쇠 필요" if key_door else ""), at - direction * 0.3 + Vector3.UP * 4.5, angle)
 		door_label(Expedition.NAMES[edge[0] - 1], at + direction * 0.3 + Vector3.UP * 4.5, angle + PI)
 	var exit_at := Expedition.center(Expedition.FINAL) + Vector3(0, 0, 12)
 	door(exit_at, false, false)
@@ -95,6 +104,7 @@ func _ready() -> void:
 	add_child(environment)
 	# Only static architecture is desaturated; actors and combat effects retain color.
 	for node in get_children():
+		if node.has_meta("keep_material"): continue
 		if node is MeshInstance3D and node.material_override is StandardMaterial3D:
 			var material := ShaderMaterial.new()
 			material.shader = preload("res://shaders/fun_background.gdshader")
@@ -134,6 +144,67 @@ func gate(index: int, opened: bool) -> void:
 	node.visible = not opened
 	node.get_child(0).collision_layer = 0 if opened else 1
 
+## The bell's soul ward: a visible barrier that holds ghosts and bodies alike.
+func seal(index: int, sealed: bool) -> void:
+	var node = seals[index]
+	node.visible = sealed
+	node.get_child(0).collision_layer = 1 if sealed else 0
+
+func is_blocked(index: int) -> bool:
+	return gates[index].visible or seals[index].visible
+
+func ward_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.42, 0.86, 1.0, 0.38)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.emission_enabled = true
+	mat.emission = Color("6fdcff")
+	mat.emission_energy_multiplier = 1.6
+	return mat
+
+func build_treasure(center: Vector3) -> void:
+	var gold := material(Color("e6b24f"), 1.4)
+	box(self, Vector3(1.6, 1.0, 1.6), center + Vector3(0, 0.5, 0), brass, true)
+	box(self, Vector3(0.9, 0.12, 0.9), center + Vector3(0, 1.06, 0), gold)
+	var relic := box(self, Vector3(0.36, 0.36, 0.36), center + Vector3(0, 1.45, 0), gold)
+	relic.rotation = Vector3(PI * 0.25, PI * 0.25, 0)
+	relic.set_meta("keep_material", true)
+	light(center + Vector3(0, 2.6, 0), Color("ffcf73"), 2.6, 9)
+	for corner in [Vector3(-8, 0, -9), Vector3(8, 0, -9), Vector3(-8, 0, 9), Vector3(8, 0, 9)]:
+		box(self, Vector3(0.8, 3.2, 0.8), center + corner + Vector3.UP * 1.6, stone, true)
+		box(self, Vector3(0.9, 0.1, 0.9), center + corner + Vector3.UP * 3.25, gold)
+
+func build_morgue(center: Vector3, room: int) -> void:
+	var pale := material(Color("7fe0b0"), 1.6)
+	var kinds := ["soldier", "shotgun", "archer", "brute", "mage", "storm"]
+	for i in range(kinds.size() - 1, 0, -1):
+		var j := rolls.randi_range(0, i)
+		var saved = kinds[i]
+		kinds[i] = kinds[j]
+		kinds[j] = saved
+	for i in 3:
+		var slot := center + Vector3(7.2, 0, [-5.5, 0.0, 5.5][i])
+		# Upright coffin behind each preserved body.
+		box(self, Vector3(0.4, 3.0, 1.6), slot + Vector3(1.3, 1.5, 0), dark, true)
+		box(self, Vector3(0.15, 3.1, 1.75), slot + Vector3(1.05, 1.55, 0), brass)
+		spawn(kinds[i], slot + Vector3(0, 0.05, 0), 999, "preserved")
+		var actor = enemies[-1]
+		actor.rotation.y = -PI * 0.5
+		actor.rewarded = true
+		actor.set_meta("price", Expedition.PRICES[kinds[i]])
+		actor.set_meta("room", room + 1)
+		room_actors[room].append(actor)
+		set_active(actor, false)
+	# Embalming fluid: restores the current body's lifetime once.
+	box(self, Vector3(1.2, 0.9, 1.2), center + Vector3(-1, 0.45, 0), stone, true)
+	var flask := box(self, Vector3(0.28, 0.5, 0.28), center + Vector3(-1, 1.15, 0), pale)
+	flask.set_meta("keep_material", true)
+	potion = flask
+	light(center + Vector3(-1, 2.4, 0), Color("7fe0b0"), 1.8, 7)
+	light(center + Vector3(6, 3.5, 0), Color("c4aec7"), 1.6, 10)
+
 func wall(at: Vector3, sideways: bool) -> void:
 	box(self, Vector3(0.5, 7, 24) if sideways else Vector3(22, 7, 0.5), at + Vector3.UP * 3.5, stone, true)
 
@@ -158,5 +229,9 @@ func door(at: Vector3, sideways: bool, opened: bool) -> void:
 	var node := box(self, Vector3(0.25, 5, 5.8) if sideways else Vector3(5.8, 5, 0.25), at + Vector3.UP * 2.5, brass, true)
 	gates.append(node)
 	gate(gates.size() - 1, opened)
+	var ward := box(self, Vector3(0.12, 5, 5.9) if sideways else Vector3(5.9, 5, 0.12), at + Vector3.UP * 2.5, ward_material(), true)
+	ward.set_meta("keep_material", true)
+	seals.append(ward)
+	seal(seals.size() - 1, false)
 	for side in [-1, 1]:
 		box(self, Vector3(0.12, 5, 0.12), at + Vector3(0 if sideways else side * 2.92, 2.5, side * 2.92 if sideways else 0), mint)

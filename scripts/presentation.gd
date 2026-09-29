@@ -235,6 +235,14 @@ func _process(dt: float) -> void:
 			actor.label.hide()
 			animate(actor)
 			continue
+		if actor.has_meta("price"):
+			actor.label.text = "보존된 " + UiText.data(preload("res://scripts/weapons.gd").info(actor.kind).name) + "
+뼈 동전 %d" % actor.get_meta("price")
+			actor.label.font_size = 20
+			actor.label.modulate = Color("84ffd4") if authority.get("coins") >= actor.get_meta("price") else Color("ff9c68")
+			actor.label.visible = authority.running and not authority.is_frozen() and aimed == actor
+			animate(actor)
+			continue
 		actor.flash = maxf(0.0, actor.flash - dt)
 		var probability: float = authority.capture_chance(actor)
 		actor.label.text = tr("TARGET") % (probability * 100)
@@ -276,6 +284,24 @@ func on_feedback(event: String, data: Dictionary) -> void:
 			if authority.get("fun_mode") != true and authority.get("room_index") in [3, 7]: sound.play("bell", -8)
 		"load_room":
 			clear_effects()
+		"sealed":
+			sound.play("bell", -2)
+			shake = maxf(shake, 0.18)
+		"unsealed":
+			sound.play("bell", -9)
+			sound.play("clear", -6)
+		"key_found":
+			sound.play("loaded", 2)
+			pulse = maxf(pulse, 0.25)
+		"door_unlocked":
+			sound.play("door", -2)
+		"door_needs_key", "too_poor":
+			sound.play("rejected", -6)
+		"purchase":
+			sound.play("clear", -4)
+		"potion":
+			sound.play("inhabit", -2)
+			pulse = maxf(pulse, 0.3)
 		"tracer":
 			if data.color.b > 0.8 and data.color.r > 0.5:
 				var midpoint: Vector3 = data.from.lerp(data.to, 0.5) + Vector3(random.randf_range(-0.2, 0.2), 0.12, 0)

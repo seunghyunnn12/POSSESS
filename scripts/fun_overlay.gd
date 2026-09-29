@@ -16,7 +16,7 @@ func _ready() -> void:
 	mouse_filter = MOUSE_FILTER_IGNORE
 	for i in Expedition.CELLS.size():
 		var cell: Vector2i = Expedition.CELLS[i]
-		map_positions.append(Vector2(32 + (cell.x + 1) * 84, 104 + (cell.y + 1) * 48))
+		map_positions.append(Vector2(32 + (cell.x + 2) * 84, 104 + (cell.y + 1) * 48))
 		var label := Label.new()
 		label.position = map_positions[i]
 		label.size = Vector2(76, 38)
@@ -40,22 +40,28 @@ func present(state: Dictionary) -> void:
 	for i in map_labels.size():
 		map_labels[i].visible = revealed(i + 1)
 		var caption := "시작" if i == 0 else ("갈림길" if i + 1 in Expedition.HUBS else ("보스" if i + 1 == Expedition.FINAL else "?"))
-		if state.visited[i] and not i + 1 in Expedition.HUBS:
+		if i + 1 == Expedition.TREASURE: caption = "보물"
+		elif i + 1 == Expedition.MORGUE: caption = "영안실"
+		if state.visited[i] and not i + 1 in Expedition.HUBS and not i + 1 in Expedition.SPECIAL:
 			caption = ("✓" if state.rewards[i] else "증강") if state.cleared[i] else "전투"
 		map_labels[i].text = ("● " if state.room == i + 1 else "") + caption
-		map_labels[i].modulate = Color("76e6cd") if state.room == i + 1 else Color("9aaeb8")
+		map_labels[i].modulate = Color("76e6cd") if state.room == i + 1 else (Color("f0c35a") if i + 1 == Expedition.TREASURE else (Color("9fe8c4") if i + 1 == Expedition.MORGUE else Color("9aaeb8")))
 	hint.text = ""
 	if state.hub:
 		hint.text = ("군주의 무덤으로 향하는 문이 열렸습니다" if state.zone == 3 else "다음 구역으로 향하는 문이 열렸습니다") if state.zone_ready else ("앞쪽 회랑 / 오른쪽 묘실 · 원하는 문으로 이동하세요" if state.room == 1 else "좌우의 문을 골라 탐험하세요")
 		if state.tutorial: hint.text = "[Tab] 건너뛰기\nWASD 이동 · 마우스로 둘러보고 문을 고르세요"
 	elif state.tutorial:
 		hint.text = "[Tab] 건너뛰기\n" + ("WASD 이동 · 좌클릭으로 앞의 병사를 약화하세요" if state.tutorial_step == 0 else "가까이 다가가 우클릭으로 빙의하세요")
+	elif state.treasure and state.reward_ready:
+		hint.text = "[F] 보물 증강 선택 · 고른 힘은 바로 최대 단계가 됩니다"
+	elif state.morgue:
+		hint.text = "관 속의 몸을 조준하고 우클릭으로 구매" + ("" if state.potion_used else " · 가운데 방부액 [F] 뼈 동전 15 (몸 수명 회복)")
 	elif state.reward_ready:
 		hint.text = "[F] 증강 선택 · 들어온 문으로 돌아가 다른 길 탐험"
-	elif state.final_room and state.cleared[-1]:
+	elif state.final_room and state.cleared[Expedition.FINAL - 1]:
 		hint.text = "군주의 무덤을 정리했습니다 · 귀환 문으로 이동하세요"
 	if bindings != null: hint.text = bindings.hint(hint.text)
-	status.text = ""
+	status.text = "열쇠 %d   ·   뼈 동전 %d" % [state.get("keys", 0), state.get("coins", 0)]
 	queue_redraw()
 
 func revealed(room: int) -> bool:

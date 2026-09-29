@@ -19,14 +19,22 @@ var death_reason := ""
 var broken_by := ""
 var hitstop_left := 0.0
 var hitstop_cooldown := 0.0
+var keys := 0
+var coins := 0
+var keys_found := 0
+var opened_doors := {}
+var potion_used := false
+var key_warn_clock := 0.0
+var loot_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	super._ready()
 	room_total = Expedition.CELLS.size()
 	for room in range(1, room_total + 1):
 		visited.append(false)
-		cleared.append(room in Expedition.HUBS)
-		rewards.append(room in Expedition.HUBS or room == Expedition.FINAL)
+		cleared.append(room in Expedition.HUBS or room in Expedition.SPECIAL)
+		rewards.append(room in Expedition.HUBS or room == Expedition.FINAL or room == Expedition.MORGUE)
+	loot_rng.seed = run_seed + 911
 	while plans.size() <= room_total: plans.append(plans[1].duplicate(true))
 	room_index = 1
 	phase = "rest"
@@ -57,9 +65,12 @@ func enter_room(index: int) -> void:
 	room_index = index
 	actors = world.room_actors[index - 1]
 	phase = "rest" if cleared[index - 1] else "combat"
-	if index in Expedition.HUBS:
+	if index in Expedition.HUBS or index in Expedition.SPECIAL:
 		visited[index - 1] = true
 		spawn_queue.clear()
+		if index == Expedition.MORGUE:
+			for actor in actors:
+				if actor.has_meta("price") and not actor.claimed: world.set_active(actor, true)
 		return
 	if visited[index - 1]: return
 	visited[index - 1] = true
@@ -67,6 +78,7 @@ func enter_room(index: int) -> void:
 	spawn_clock = 2.0
 	activate_hosts()
 	refresh_gates()
+	feedback.emit("sealed", {"room": index})
 	boss_clock = 3.0
 	boss_pattern = 0
 	clear_pending = false
@@ -79,6 +91,13 @@ func activate_hosts() -> void:
 		if tutorial and actor != actors[0]: continue
 		if not actor.claimed and not actor.rewarded:
 			world.set_active(actor, true)
+
+## Bodies for sale in the morgue are merchandise, not enemies.
+func remaining() -> int:
+	var count := 0
+	for actor in actors:
+		if actor.alive and not actor.claimed and not actor.has_meta("price"): count += 1
+	return count
 
 func timers_safe() -> bool:
 	return state == State.Soul and phase != "combat"
@@ -122,6 +141,8 @@ func finish(result: String) -> void:
 		hazards.clear()
 		refresh_gates()
 		feedback.emit("room_clear", {"index": room_index})
+		feedback.emit("unsealed", {"room": room_index})
+		grant_clear_loot()
 		return
 	if death_reason.is_empty():
 		death_reason = "유령의 전투 시간이 다했습니다." if broken_by.is_empty() else broken_by + " 이후 다음 몸을 얻지 못했습니다."
@@ -132,6 +153,10 @@ func reward_host(actor, immediate: bool) -> void:
 	actor.rewarded = true
 	var small: bool = actor.has_meta("fodder")
 	var amount := 3 if small else 25
+	if small:
+		if loot_rng.randf() < 0.25: coins += 1
+	elif not immediate:
+		coins += 3
 	if state == State.Body:
 		var recovery := 0.5 * rank_of("harvest")
 		if body_kind == "brute": recovery += 2.0 * rank_of("leech")
@@ -176,7 +201,7 @@ func choose_upgrade(index: int) -> void:
 	var old_max := decay_max
 	var old_mag := magazine_size()
 	var id := upgrade_choices[index]
-	upgrades[id] = rank_of(id) + 1
+	upgrades[id] = 2 if room_index == Expedition.TREASURE else rank_of(id) + 1
 	rewards[room_index - 1] = true
 	if state == State.Body:
 		decay_max = current_stats().life
@@ -194,6 +219,7 @@ func current_stats() -> Dictionary:
 	return stats
 
 func capture_chance(actor) -> float:
+	if actor.has_meta("price"): return 1.0
 	return 0.0 if actor.has_meta("fodder") else super.capture_chance(actor)
 
 func begin_possession(candidate) -> void:
@@ -204,6 +230,20 @@ func attempt_possession() -> void:
 	var candidate = aimed_actor()
 	if is_instance_valid(candidate) and candidate.has_meta("fodder"):
 		feedback.emit("unreachable", {})
+		return
+	if is_instance_valid(candidate) and candidate.has_meta("price"):
+		if stun_left > 0 or state not in [State.Soul, State.Body]: return
+		if eye().distance_to(candidate.position + Vector3.UP) > 6.0:
+			feedback.emit("unreachable", {})
+			return
+		var price: int = candidate.get_meta("price")
+		if coins < price:
+			feedback.emit("too_poor", {"price": price, "coins": coins})
+			return
+		coins -= price
+		candidate.remove_meta("price")
+		feedback.emit("purchase", {"kind": candidate.kind, "price": price})
+		begin_possession(candidate)
 		return
 	super.attempt_possession()
 
@@ -295,12 +335,15 @@ func _physics_process(dt: float) -> void:
 		learned = true
 		activate_hosts()
 	super._physics_process(dt)
+	key_warn_clock = maxf(0, key_warn_clock - dt)
 	if phase == "rest":
 		if intent.interact: open_reward()
 		if is_frozen(): return
+		tick_key_doors()
+		if room_index == Expedition.MORGUE and intent.interact: buy_potion()
 		for edge_index in Expedition.LINKS.size():
 			var edge: Array = Expedition.LINKS[edge_index]
-			if not room_index in edge or world.gates[edge_index].visible: continue
+			if not room_index in edge or world.is_blocked(edge_index): continue
 			var next: int = edge[1] if room_index == edge[0] else edge[0]
 			var from: Vector3 = Expedition.center(room_index)
 			var to: Vector3 = Expedition.center(next)
@@ -310,7 +353,7 @@ func _physics_process(dt: float) -> void:
 			if offset.dot(direction) > 1.0 and absf(offset.dot(Vector3(-direction.z, 0, direction.x))) < 3.0:
 				enter_room(next)
 				break
-		if room_index == Expedition.FINAL and cleared[-1] and player.position.z > Expedition.center(Expedition.FINAL).z + 15:
+		if room_index == Expedition.FINAL and cleared[Expedition.FINAL - 1] and player.position.z > Expedition.center(Expedition.FINAL).z + 15:
 			outcome = "CLEAR"
 			focus_left = 0
 			Engine.time_scale = 1
@@ -321,5 +364,51 @@ func refresh_gates() -> void:
 	for i in Expedition.LINKS.size():
 		var edge: Array = Expedition.LINKS[i]
 		var fighting_here: bool = phase == "combat" and room_index in edge
-		world.gate(i, not fighting_here and Expedition.unlocked(i, cleared))
-	world.gate(Expedition.LINKS.size(), cleared[-1])
+		var locked: bool = not Expedition.unlocked(i, cleared) or (i in Expedition.KEY_DOORS and not opened_doors.has(i))
+		world.gate(i, not locked)
+		world.seal(i, fighting_here and not locked)
+	world.gate(Expedition.LINKS.size(), cleared[Expedition.FINAL - 1])
+
+func grant_clear_loot() -> void:
+	if room_index in Expedition.HUBS or room_index in Expedition.SPECIAL: return
+	coins += 5
+	var combat_cleared := 0
+	for room in range(1, room_total + 1):
+		if cleared[room - 1] and not room in Expedition.HUBS and not room in Expedition.SPECIAL: combat_cleared += 1
+	# The first cleared fight always pays a key so the treasure room is reachable; later fights are a gamble.
+	if room_index != Expedition.FINAL and ((keys_found == 0 and combat_cleared == 1) or loot_rng.randf() < 0.3):
+		keys += 1
+		keys_found += 1
+		feedback.emit("key_found", {"keys": keys})
+
+func tick_key_doors() -> void:
+	for edge_index in Expedition.KEY_DOORS:
+		if opened_doors.has(edge_index): continue
+		var edge: Array = Expedition.LINKS[edge_index]
+		if not room_index in edge: continue
+		var at: Vector3 = (Expedition.center(edge[0]) + Expedition.center(edge[1])) * 0.5
+		var flat: Vector3 = player.position - at
+		flat.y = 0
+		if flat.length() > 3.5: continue
+		if keys > 0:
+			keys -= 1
+			opened_doors[edge_index] = true
+			refresh_gates()
+			feedback.emit("door_unlocked", {"room": Expedition.KEY_DOORS[edge_index]})
+		elif key_warn_clock <= 0:
+			key_warn_clock = 2.5
+			feedback.emit("door_needs_key", {})
+
+func buy_potion() -> void:
+	if potion_used or state != State.Body or not is_instance_valid(world.potion): return
+	if player.position.distance_to(world.potion.global_position) > 2.8: return
+	if coins < Expedition.POTION_PRICE:
+		if key_warn_clock <= 0:
+			key_warn_clock = 1.5
+			feedback.emit("too_poor", {"price": Expedition.POTION_PRICE, "coins": coins})
+		return
+	coins -= Expedition.POTION_PRICE
+	potion_used = true
+	decay = decay_max
+	world.potion.hide()
+	feedback.emit("potion", {})
