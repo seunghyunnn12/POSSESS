@@ -171,9 +171,9 @@ func reward_host(actor, immediate: bool) -> void:
 	var small: bool = actor.has_meta("fodder")
 	var amount := 3 if small else 25
 	if small:
-		if loot_rng.randf() < 0.25: coins += 1
+		if loot_rng.randf() < 0.1: coins += 1
 	elif not immediate:
-		coins += 3
+		coins += 2
 	if state == State.Body:
 		var recovery := 0.5 * rank_of("harvest")
 		if body_kind == "brute": recovery += 2.0 * rank_of("leech")
@@ -426,7 +426,7 @@ func refresh_gates() -> void:
 func grant_clear_loot() -> void:
 	if not map.fights(room_index): return
 	var boss: bool = map.kind(room_index) == "boss"
-	coins += 15 if boss else 5
+	coins += 12 if boss else 3
 	var fights_cleared := 0
 	for room in range(1, room_total + 1):
 		if cleared[room - 1] and map.fights(room): fights_cleared += 1

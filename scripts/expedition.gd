@@ -3,8 +3,8 @@ extends RefCounted
 ## grid, its boss room opens onto the next zone's crossroads. Room IDs are 1-based.
 ## Kinds: hub, combat, trial, treasure, morgue, sanctuary, secret, boss.
 
-const PRICES = {"soldier": 20, "shotgun": 25, "archer": 25, "brute": 25, "mage": 30, "storm": 30}
-const POTION_PRICE = 15
+const PRICES = {"soldier": 30, "shotgun": 40, "archer": 40, "brute": 40, "mage": 45, "storm": 45}
+const POTION_PRICE = 25
 const ZONE_ROWS := 5
 const X_LIMIT := 3
 const BOSS_TYPES := ["warden", "warden", "sovereign"]
@@ -111,6 +111,13 @@ func grow_zone(zone: int, start: Vector2i) -> bool:
 	for c in dead_ends:
 		var south: Vector2i = c + Vector2i.DOWN
 		if south in local or parent[c] == south: continue
+		# The boss sits at least three doors from the crossroads.
+		var depth := 0
+		var walk: Vector2i = c
+		while walk != start:
+			walk = parent[walk]
+			depth += 1
+		if depth < 3: continue
 		if boss.x == 999 or c.y > boss.y or (c.y == boss.y and absi(c.x) < absi(boss.x)): boss = c
 	if boss.x == 999: return false
 	dead_ends.erase(boss)

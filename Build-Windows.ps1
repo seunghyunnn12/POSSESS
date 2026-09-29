@@ -1,7 +1,8 @@
 param([ValidatePattern('^builds/[A-Za-z0-9_-]+$')][string] $OutputDirectory = 'builds/windows')
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
-$engine = (Get-Command Godot_v4.7.1-stable_win64_console.exe).Source
+$engine = (Get-Command Godot_v4.7.1-stable_win64_console.exe -ErrorAction SilentlyContinue).Source
+if (-not $engine) { $engine = Join-Path $env:LOCALAPPDATA 'Microsoft/WinGet/Packages/GodotEngine.GodotEngine_Microsoft.Winget.Source_8wekyb3d8bbwe/Godot_v4.7.1-stable_win64_console.exe' }
 if (-not (Test-Path -LiteralPath '.build-tools/windows_release_x86_64.exe')) {
     throw 'Godot 4.7.1 Windows export templates are required in .build-tools. See BUILD.md.'
 }
@@ -22,6 +23,10 @@ Copy-Item -LiteralPath .build-tools/GODOT-COPYRIGHT.txt -Destination "$OutputDir
 Copy-Item -LiteralPath assets/characters/skeletons/LICENSE.txt -Destination "$OutputDirectory/SKELETONS-LICENSE.txt"
 Copy-Item -LiteralPath assets/characters/adventurers/LICENSE.txt -Destination "$OutputDirectory/ADVENTURERS-LICENSE.txt"
 Copy-Item -LiteralPath WINDOWS-README.txt -Destination "$OutputDirectory/README.txt"
+Copy-Item -LiteralPath PLAYTEST-FEEDBACK.txt -Destination "$OutputDirectory/PLAYTEST-FEEDBACK.txt"
+Copy-Item -LiteralPath assets/env/dungeon/LICENSE.txt -Destination "$OutputDirectory/DUNGEON-LICENSE.txt"
+Copy-Item -LiteralPath assets/env/halloween/LICENSE.txt -Destination "$OutputDirectory/HALLOWEEN-LICENSE.txt"
+Copy-Item -LiteralPath assets/sfx/kenney_impact/License.txt -Destination "$OutputDirectory/SFX-KENNEY-LICENSE.txt"
 Get-FileHash -Algorithm SHA256 -LiteralPath "$OutputDirectory/POSSESS.exe","$OutputDirectory/POSSESS.pck" |
     Format-List | Out-File -Encoding utf8 "$OutputDirectory/SHA256.txt"
 Write-Host "Built $OutputDirectory/POSSESS.exe"

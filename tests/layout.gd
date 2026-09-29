@@ -41,6 +41,19 @@ func _initialize() -> void:
 		check(map.key_doors.size() == 3 and map.secret_doors.size() == 3, "seed %d: keyed and secret doors" % seed_value)
 		for edge in map.key_doors: check(map.kind(map.key_doors[edge]) == "treasure" and map.key_doors[edge] in map.links[edge], "seed %d: key door leads to treasure" % seed_value)
 		for edge in map.secret_doors: check(map.kind(map.other(edge, map.secret_doors[edge])) == "combat", "seed %d: secret hangs off a combat room" % seed_value)
+		# Each boss sits at least three doors from its zone's crossroads.
+		for z in 3:
+			var hops := {map.hubs[z]: 0}
+			var todo := [map.hubs[z]]
+			while not todo.is_empty():
+				var r: int = todo.pop_front()
+				for e in map.links:
+					if r in e:
+						var o: int = e[1] if e[0] == r else e[0]
+						if not hops.has(o) and map.zone(o) == z + 1:
+							hops[o] = hops[r] + 1
+							todo.append(o)
+			check(hops.get(map.bosses[z], 0) >= 3, "seed %d: zone %d boss is deep (%d)" % [seed_value, z + 1, hops.get(map.bosses[z], 0)])
 		# Cells unique.
 		var uniq := {}
 		for c in map.cells: uniq[c] = true

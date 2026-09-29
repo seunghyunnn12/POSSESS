@@ -76,13 +76,13 @@ func present(state: Dictionary) -> void:
 		map_labels[i].modulate = Color("76e6cd") if state.room == room else TINT.get(kind, Color("9aaeb8"))
 	hint.text = ""
 	if state.tutorial:
-		hint.text = "[Tab] 건너뛰기\n" + ("WASD 이동 · 마우스로 둘러보고 문을 고르세요" if state.hub else ("WASD 이동 · 좌클릭으로 앞의 병사를 약화하세요" if state.tutorial_step == 0 else "가까이 다가가 우클릭으로 빙의하세요"))
+		hint.text = "[Tab] 건너뛰기\n" + ("WASD 이동 · 마우스로 둘러보고 문을 고르세요" if state.hub else ("W/A/S/D 이동 · 좌클릭으로 적을 쏴서 약하게 만드세요" if state.tutorial_step == 0 else "빙의 확률이 올랐습니다 · 가까이 가서 우클릭으로 몸을 빼앗으세요"))
 	elif state.hub:
 		hint.text = "문을 골라 탐험하세요 · 구역 끝의 보스를 쓰러뜨리면 다음 구역이 열립니다"
 	elif state.kind == "treasure" and state.reward_ready:
 		hint.text = "상자 앞에서 [F] · 고른 힘은 바로 최대 단계가 됩니다"
 	elif state.morgue:
-		hint.text = "관 속의 몸을 조준하고 우클릭으로 구매" + ("" if state.potion_used else " · 가운데 방부액 [F] 뼈 동전 15")
+		hint.text = "관 속의 몸을 조준하고 우클릭으로 구매" + ("" if state.potion_used else " · 가운데 방부액 [F] 뼈 동전 25")
 	elif state.kind == "sanctuary":
 		hint.text = "촛불 앞에서 [F] · 몸의 수명을 되돌립니다"
 	elif state.reward_ready:

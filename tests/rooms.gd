@@ -197,9 +197,10 @@ func run() -> void:
 	check(sim.state == sim.State.Body and sim.body_kind == ware.kind, "the bought body becomes the host")
 	var flask = world.potions[morgue]
 	sim.decay = sim.decay_max * 0.3
+	sim.coins = Expedition.POTION_PRICE + 5
 	sim.player.position = Vector3(flask.global_position.x - 1.2, 0.05, flask.global_position.z)
 	sim.buy_potion()
-	check(is_equal_approx(sim.decay, sim.decay_max) and sim.coins == 20 - Expedition.POTION_PRICE, "embalming fluid restores the body for its price")
+	check(is_equal_approx(sim.decay, sim.decay_max) and sim.coins == 5, "embalming fluid restores the body for its price")
 
 	game.ui_presenter.refresh()
 	await process_frame
