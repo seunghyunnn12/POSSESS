@@ -299,9 +299,17 @@ func on_feedback(event: String, data: Dictionary) -> void:
 			sound.play("rejected", -6)
 		"purchase":
 			sound.play("clear", -4)
-		"potion":
+		"potion", "blessing":
 			sound.play("inhabit", -2)
 			pulse = maxf(pulse, 0.3)
+		"secret_found":
+			sound.play("clear", -2)
+			sound.play("loaded", 0)
+		"wall_broken":
+			sound.play("eject", 2)
+			shake = maxf(shake, 0.8)
+		"need_body":
+			sound.play("rejected", -6)
 		"tracer":
 			if data.color.b > 0.8 and data.color.r > 0.5:
 				var midpoint: Vector3 = data.from.lerp(data.to, 0.5) + Vector3(random.randf_range(-0.2, 0.2), 0.12, 0)

@@ -102,14 +102,14 @@ func torch(at: Vector3, yaw: float, colour: Color) -> void:
 	arena.add_child(lamp)
 	flicker.append({"light": lamp, "base": 1.7, "phase": rng.randf() * 100.0, "flame": flame})
 
-func dress_room(center: Vector3, doors: Array, zone: int, kind: String) -> void:
+func dress_room(center: Vector3, doors: Array, hidden: Array, zone: int, kind: String) -> void:
 	var zone_index := clampi(zone - 1, 0, 2)
 	# Ceiling closes the box so fog and torchlight have something to catch.
 	var ceiling: MeshInstance3D = arena.box(arena, Vector3(22, 0.6, 24), center + Vector3(0, 7.3, 0), arena.dark)
 	ceiling.set_meta("masonry", true)
 	for dir in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 		var half := wall_length(dir) * 0.5
-		var has_door: bool = dir in doors
+		var has_door: bool = dir in doors or dir in hidden
 		var spots := [-(half - 1.4), half - 1.4]
 		if has_door: spots.append_array([-4.2, 4.2])
 		else: spots.append(0.0)
@@ -117,11 +117,11 @@ func dress_room(center: Vector3, doors: Array, zone: int, kind: String) -> void:
 			var at := wall_point(center, dir, along, 0.9)
 			dungeon("pillar", at, 0.0, PILLAR_SCALE)
 			blocker(at + Vector3.UP * 3.5, Vector3(1.8, 7, 1.8))
-			var flank: bool = has_door and absf(along) < 5.0
+			var flank: bool = dir in doors and absf(along) < 5.0
 			if flank or (not has_door and along == 0.0 and kind != "hub"):
 				torch(wall_point(center, dir, along, 1.8) + Vector3.UP * 2.6, facing(dir), ZONE_TORCH[zone_index])
 		if not has_door:
-			var banner_colour: String = "yellow" if kind == "treasure" else ("white" if kind == "morgue" else ZONE_BANNER[zone_index])
+			var banner_colour: String = {"treasure": "yellow", "morgue": "white", "sanctuary": "white", "secret": "brown", "trial": "red", "boss": "red"}.get(kind, ZONE_BANNER[zone_index])
 			for along in [-half * 0.5, half * 0.5]:
 				dungeon("banner_patternA_" + banner_colour if rng.randf() < 0.5 else "banner_" + banner_colour, wall_point(center, dir, along, 0.05) + Vector3.UP * 1.3, facing(dir), Vector3.ONE * 1.3)
 			if zone_index == 1 and kind == "combat":
@@ -133,7 +133,7 @@ func dress_room(center: Vector3, doors: Array, zone: int, kind: String) -> void:
 
 func scatter(center: Vector3, zone_index: int, kind: String) -> void:
 	var common := ["bone_A", "bone_B", "bone_C", "skull", "ribcage"]
-	var count := 14 if kind == "combat" else 6
+	var count := 14 if kind in ["combat", "trial", "boss"] else 6
 	for i in count:
 		var at := center + Vector3(rng.randf_range(-9.0, 9.0), 0, rng.randf_range(-10.0, 10.0))
 		if absf(at.x - center.x) < 3.0 and absf(at.z - center.z) < 3.0: continue
@@ -143,7 +143,7 @@ func scatter(center: Vector3, zone_index: int, kind: String) -> void:
 	if zone_index == 1: clutter.append_array([["table_medium_broken", 1.0], ["candle_melted", 1.3]])
 	if zone_index == 2: clutter.append_array([["rubble_half", 0.6], ["sword_shield_broken", 1.0]])
 	if kind == "hub": clutter = [["candle_triple", 1.3], ["candle_melted", 1.3]]
-	for i in (8 if kind == "combat" else 4):
+	for i in (8 if kind in ["combat", "trial", "boss"] else 4):
 		var dir: Vector2i = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN][rng.randi_range(0, 3)]
 		var along := rng.randf_range(-6.5, 6.5)
 		if absf(along) < 3.6: along = signf(along) * 3.8 if along != 0.0 else 3.8

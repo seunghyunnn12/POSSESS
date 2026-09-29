@@ -46,6 +46,7 @@ func _ready() -> void:
 		DisplayServer.window_set_title("POSSESS — 지하 원정 · 3구역")
 	arena = preload("res://scripts/fun_arena.gd").new() if fun_run else Arena.new()
 	arena.run_seed = run_seed
+	if fun_run: arena.map = preload("res://scripts/expedition.gd").generate(run_seed)
 	arena.layout = "training" if guided_run else "ossuary"
 	arena.name = "Arena"
 	add_child(arena)
@@ -65,6 +66,7 @@ func _ready() -> void:
 	authority = preload("res://scripts/fun.gd").new() if fun_run else ((Action.new() if action_run else Campaign.new()) if campaign_run else Journey.new()) if guided_run else Authority.new()
 	if authority is Campaign:
 		authority.run_seed = run_seed
+	if fun_run: authority.map = arena.map
 	authority.name = "authority"
 	add_child(authority)
 	authority.configure(player, arena.enemies)

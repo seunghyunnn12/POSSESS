@@ -9,7 +9,12 @@ var clock := 0.0
 var door_trim := material(Color("3aa88a"), 0.35)
 var gates: Array = []
 var seals: Array = []
-var potion: MeshInstance3D
+var map
+var populated: Array = []
+var potions := {}
+var altars := {}
+var morgue_slots := {}
+var cracks := {}
 var room_actors: Array = []
 var source
 var backgrounds: Array[ShaderMaterial] = []
@@ -17,94 +22,63 @@ var background_soul := -1.0
 
 func _ready() -> void:
 	rolls.seed = run_seed if run_seed != 0 else Time.get_ticks_usec()
+	if map == null: map = Expedition.generate(rolls.seed)
 	dresser = Dresser.new(self, rolls.seed + 77)
-	for room in Expedition.CELLS.size():
+	var sides := [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+	for room in range(1, map.size() + 1):
 		room_actors.append([])
-		var center: Vector3 = Expedition.center(room + 1)
+		populated.append(false)
+		var center: Vector3 = map.center(room)
+		var kind: String = map.kind(room)
 		box(self, Vector3(22, 1, 24), center + Vector3(0, -0.5, 0), dark, true)
 		var doors: Array = []
-		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var other: int = Expedition.CELLS.find(Expedition.CELLS[room] + direction) + 1
-			for edge in Expedition.LINKS:
-				if room + 1 in edge and other in edge: doors.append(direction)
-		if room + 1 == Expedition.FINAL: doors.append(Vector2i.DOWN)
-		var kind := "hub" if room + 1 in Expedition.HUBS else ("treasure" if room + 1 == Expedition.TREASURE else ("morgue" if room + 1 == Expedition.MORGUE else "combat"))
-		dresser.dress_room(center, doors, Expedition.zone(room + 1), kind)
-		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var neighbor: int = Expedition.CELLS.find(Expedition.CELLS[room] + direction) + 1
-			var connected := false
-			for edge in Expedition.LINKS:
-				if room + 1 in edge and neighbor in edge: connected = true
-			if room + 1 == Expedition.FINAL and direction == Vector2i.DOWN: continue
-			if connected or (neighbor > 0 and neighbor < room + 1): continue
+		var hidden: Array = []
+		for direction in sides:
+			var other: int = map.room_at(map.cells[room - 1] + direction)
+			for edge in map.links.size():
+				if room in map.links[edge] and other in map.links[edge]:
+					if map.secret_doors.has(edge): hidden.append(direction)
+					else: doors.append(direction)
+		if room == map.final: doors.append(Vector2i.DOWN)
+		dresser.dress_room(center, doors, hidden, map.zone(room), kind)
+		for direction in sides:
+			var neighbor: int = map.room_at(map.cells[room - 1] + direction)
+			if direction in doors or direction in hidden: continue
+			if neighbor > 0 and neighbor < room: continue
 			wall(center + Vector3(direction.x * 11, 0, direction.y * 12), direction.x != 0)
-		light(center + Vector3(0, 5, 0), [Color("b3c5d1"), Color("b5c4b0"), Color("c4aec7")][Expedition.zone(room + 1) - 1], 2.2, 16)
-		if room + 1 == Expedition.TREASURE:
-			build_treasure(center)
-			continue
-		if room + 1 == Expedition.MORGUE:
-			build_morgue(center, room)
-			continue
-		if room + 1 in Expedition.HUBS: continue
-		for x in [-5, 5]:
-			var cover := box(self, Vector3(2, 1.1, 2), center + Vector3(x, 0.55, -2 if room % 2 == 1 else 2), stone, true)
-			cover.visible = false
-			dresser.spooky("coffin_decorated" if x < 0 else "coffin", cover.position - Vector3.UP * 0.55, PI * 0.5 * (room % 2), Vector3(1.0, 0.85, 0.68))
-		for x in [-9, 9]:
-			for dz in [-7, 5]:
-				dresser.dungeon("floor_tile_grate_open", center + Vector3(x, 0.01, dz), 0.0, Vector3(0.75, 1.0, 0.75))
-		var roles := ["soldier", "shotgun", "brute", "mage"] if room % 2 == 1 else ["archer", "storm", "shotgun", "brute"]
-		for i in range(roles.size() - 1, 0, -1):
-			var j := rolls.randi_range(0, i)
-			var saved = roles[i]
-			roles[i] = roles[j]
-			roles[j] = saved
-		for i in 4:
-			spawn(roles[i], center + Vector3([-2, 5, -5, 2][i], 0.05, [3, -5, -6, -8][i]), 2.5 + i * 0.3)
-			var actor = enemies[-1]
-			actor.set_meta("room", room + 1)
-			room_actors[room].append(actor)
-			set_active(actor, false)
-		for i in (18 if room + 1 == Expedition.FINAL else 30 + (Expedition.zone(room + 1) - 1) * 4):
-			var actor := Actor.new()
-			actor.setup("soldier")
-			actor.set_meta("fodder", true)
-			actor.set_meta("room", room + 1)
-			actor.position = center + Vector3(9 if i % 2 == 0 else -9, 0.05, (5 if i % 4 < 2 else -7))
-			actor.home = actor.position
-			actor.max_hp = 22
-			actor.hp = 22
-			actor.visual = Node3D.new()
-			actor.add_child(actor.visual)
-			var model = load(Visuals.MINION.path).instantiate()
-			model.scale = Vector3.ONE * Visuals.MINION.scale
-			actor.visual.add_child(model)
-			actor.animation = find_animation(model)
-			tint_minion(model)
-			actor.label = Label3D.new()
-			actor.add_child(actor.label)
-			add_child(actor)
-			enemies.append(actor)
-			room_actors[room].append(actor)
-			set_active(actor, false)
-		if room + 1 == Expedition.FINAL:
-			spawn("brute", center + Vector3(0, 0.05, 6), 4, "sovereign")
-			var boss = enemies[-1]
-			boss.visual.get_child(0).scale *= Visuals.BOSS_SCALE
-			boss.set_meta("room", room + 1)
-			room_actors[room].append(boss)
-			set_active(boss, false)
-	for edge in Expedition.LINKS:
-		var from: Vector3 = Expedition.center(edge[0])
-		var to: Vector3 = Expedition.center(edge[1])
+		light(center + Vector3(0, 5, 0), [Color("b3c5d1"), Color("b5c4b0"), Color("c4aec7")][map.zone(room) - 1], 1.6, 16)
+		match kind:
+			"treasure": build_treasure(center)
+			"morgue": build_morgue(center, room)
+			"sanctuary": build_sanctuary(center, room)
+			"secret": build_secret(center)
+			"combat", "trial", "boss":
+				for x in [-5, 5]:
+					var cover := box(self, Vector3(2, 1.1, 2), center + Vector3(x, 0.55, -2 if room % 2 == 1 else 2), stone, true)
+					cover.visible = false
+					dresser.spooky("coffin_decorated" if x < 0 else "coffin", cover.position - Vector3.UP * 0.55, PI * 0.5 * (room % 2), Vector3(1.0, 0.85, 0.68))
+				for x in [-9, 9]:
+					for dz in [-7, 5]:
+						dresser.dungeon("floor_tile_grate_open", center + Vector3(x, 0.01, dz), 0.0, Vector3(0.75, 1.0, 0.75))
+				if kind == "trial":
+					for x in [-7, 7]:
+						dresser.spooky("post_skull", center + Vector3(x, 0, 0), 0.0, Vector3.ONE * 1.3)
+	for edge in map.links.size():
+		var pair: Array = map.links[edge]
+		var from: Vector3 = map.center(pair[0])
+		var to: Vector3 = map.center(pair[1])
 		var at := (from + to) * 0.5
 		var direction := (to - from).normalized()
-		var key_door: bool = gates.size() in Expedition.KEY_DOORS
-		door(at, direction.x != 0, not gates.size() in Expedition.LOCKS and not key_door)
+		var secret: bool = map.secret_doors.has(edge)
+		var keyed: bool = map.key_doors.has(edge)
+		door(at, direction.x != 0, not secret and not keyed, secret)
+		if secret:
+			build_crack(edge, at, direction, pair)
+			continue
 		var angle := atan2(-direction.x, -direction.z)
-		door_label(Expedition.NAMES[edge[1] - 1] + ("\n열쇠 필요" if key_door else ""), at - direction * 0.3 + Vector3.UP * 4.5, angle)
-		door_label(Expedition.NAMES[edge[0] - 1], at + direction * 0.3 + Vector3.UP * 4.5, angle + PI)
-	var exit_at := Expedition.center(Expedition.FINAL) + Vector3(0, 0, 12)
+		door_label(door_name(pair[1]), at - direction * 0.3 + Vector3.UP * 4.5, angle)
+		door_label(door_name(pair[0]), at + direction * 0.3 + Vector3.UP * 4.5, angle + PI)
+	var exit_at: Vector3 = map.center(map.final) + Vector3(0, 0, 12)
 	door(exit_at, false, false)
 	door_label("귀환", exit_at + Vector3(0, 4.5, -0.3), PI)
 	box(self, Vector3(8, 1, 8), exit_at + Vector3(0, -0.5, 4), dark, true)
@@ -247,19 +221,12 @@ func build_morgue(center: Vector3, room: int) -> void:
 		var coffin: Node3D = dresser.spooky("coffin_decorated", slot + Vector3(1.55, 1.5, 0))
 		if coffin != null: coffin.rotation = Vector3(PI * 0.5, -PI * 0.5, 0)
 		dresser.spooky("candle_triple" if i != 1 else "skull_candle", slot + Vector3(0.9, 0, 1.3), 0.0, Vector3.ONE * 0.9)
-		spawn(kinds[i], slot + Vector3(0, 0.05, 0), 999, "preserved")
-		var actor = enemies[-1]
-		actor.rotation.y = -PI * 0.5
-		actor.rewarded = true
-		actor.set_meta("price", Expedition.PRICES[kinds[i]])
-		actor.set_meta("room", room + 1)
-		room_actors[room].append(actor)
-		set_active(actor, false)
+		morgue_slots[room] = morgue_slots.get(room, []) + [[kinds[i], slot]]
 	# Embalming fluid: restores the current body's lifetime once.
 	box(self, Vector3(1.2, 0.9, 1.2), center + Vector3(-1, 0.45, 0), stone, true)
 	var flask := box(self, Vector3(0.28, 0.5, 0.28), center + Vector3(-1, 1.15, 0), pale)
 	flask.set_meta("keep_material", true)
-	potion = flask
+	potions[room] = flask
 	light(center + Vector3(-1, 2.4, 0), Color("7fe0b0"), 1.8, 7)
 	light(center + Vector3(6, 3.5, 0), Color("c4aec7"), 1.6, 10)
 
@@ -272,24 +239,131 @@ func door_label(text: String, at: Vector3, angle: float) -> void:
 	label.font = Visuals.THEME.default_font
 	label.font_size = 64
 	label.double_sided = false
-	label.pixel_size = 0.012
+	label.pixel_size = 0.0075
 	label.position = at
 	label.rotation.y = angle
 	add_child(label)
 
-func door(at: Vector3, sideways: bool, opened: bool) -> void:
+func door_name(room: int) -> String:
+	var kind: String = map.kind(room)
+	if kind == "treasure": return map.names[room - 1] + "
+열쇠 필요"
+	if kind == "trial": return map.names[room - 1] + "
+강한 적 · 보상 2배"
+	if kind == "boss": return map.names[room - 1] + "
+보스"
+	return map.names[room - 1]
+
+func build_sanctuary(center: Vector3, room: int) -> void:
+	dresser.spooky("shrine_candles", center, 0.0, Vector3.ONE * 1.6)
+	for spot in [Vector3(-2.2, 0, -1.2), Vector3(2.2, 0, -1.2), Vector3(-1.6, 0, 1.8), Vector3(1.6, 0, 1.8)]:
+		dresser.spooky("candle_triple", center + spot, randf() * TAU, Vector3.ONE * 1.1)
+	light(center + Vector3(0, 2.2, 0), Color("ffd28a"), 2.4, 9)
+	altars[room] = center
+
+func build_secret(center: Vector3) -> void:
+	dresser.dungeon("chest", center + Vector3(0, 0, -1), 0.0, Vector3.ONE * 1.2)
+	for spot in [Vector3(-1.6, 0, 0.4), Vector3(1.5, 0, -0.2), Vector3(0.3, 0, 1.4)]:
+		dresser.dungeon("coin_stack_small", center + spot, randf() * TAU, Vector3.ONE)
+	light(center + Vector3(0, 2.2, 0), Color("ffcf73"), 2.0, 8)
+
+## The secret doorway is sealed by a cracked wall that a body's explosion can bring down.
+func build_crack(edge: int, at: Vector3, direction: Vector3, pair: Array) -> void:
+	var toward_combat: Vector3 = direction if map.kind(pair[1]) == "combat" else -direction
+	var sideways := absf(direction.x) > 0.5
+	var model: Node3D = dresser.dungeon("wall_cracked", at + toward_combat * 0.35, PI * 0.5 if sideways else 0.0, Vector3(1.5, 1.25, 0.35))
+	cracks[edge] = {"at": at + toward_combat * 0.6 + Vector3.UP * 1.2, "model": model}
+
+func break_crack(edge: int) -> void:
+	if not cracks.has(edge): return
+	var info: Dictionary = cracks[edge]
+	if is_instance_valid(info.model): info.model.queue_free()
+	gate(edge, true)
+	dresser.dungeon("rubble_half", info.at - Vector3.UP * 1.2, randf() * TAU, Vector3.ONE * 0.6)
+	cracks.erase(edge)
+
+## Enemies and wares are created the first time a room is entered.
+func populate(room: int) -> void:
+	if populated[room - 1]: return
+	populated[room - 1] = true
+	var center: Vector3 = map.center(room)
+	var kind: String = map.kind(room)
+	if kind == "morgue":
+		for entry in morgue_slots.get(room, []):
+			spawn(entry[0], entry[1] + Vector3(0, 0.05, 0), 999, "preserved")
+			var actor = enemies[-1]
+			actor.rotation.y = -PI * 0.5
+			actor.rewarded = true
+			actor.set_meta("price", Expedition.PRICES[entry[0]])
+			actor.set_meta("room", room)
+			room_actors[room - 1].append(actor)
+			set_active(actor, false)
+		return
+	if not map.fights(room): return
+	var zone: int = map.zone(room)
+	var roles := ["soldier", "shotgun", "brute", "mage", "archer", "storm"]
+	for i in range(roles.size() - 1, 0, -1):
+		var j := rolls.randi_range(0, i)
+		var saved = roles[i]
+		roles[i] = roles[j]
+		roles[j] = saved
+	var hosts := 5 if kind == "trial" else 4
+	var elite := ["swift", "preserved", "frenzied", "seer"]
+	for i in hosts:
+		var trait_id: String = elite[rolls.randi_range(0, elite.size() - 1)] if kind == "trial" or (zone > 1 and rolls.randf() < 0.25 * (zone - 1)) else "common"
+		spawn(roles[i], center + Vector3([-2, 5, -5, 2, 0][i], 0.05, [3, -5, -6, -8, -2][i]), 2.5 + i * 0.3, trait_id)
+		var actor = enemies[-1]
+		if kind == "trial":
+			actor.max_hp *= 1.35
+			actor.hp = actor.max_hp
+		actor.set_meta("room", room)
+		room_actors[room - 1].append(actor)
+		set_active(actor, false)
+	var fodder := 18 if kind == "boss" else (26 if kind == "trial" else 30 + (zone - 1) * 4)
+	for i in fodder:
+		var actor := Actor.new()
+		actor.setup("soldier")
+		actor.set_meta("fodder", true)
+		actor.set_meta("room", room)
+		actor.position = center + Vector3(9 if i % 2 == 0 else -9, 0.05, (5 if i % 4 < 2 else -7))
+		actor.home = actor.position
+		actor.max_hp = 22 * (1.5 if kind == "trial" else 1.0) * (1.0 + 0.15 * (zone - 1))
+		actor.hp = actor.max_hp
+		actor.visual = Node3D.new()
+		actor.add_child(actor.visual)
+		var body = load(Visuals.MINION.path).instantiate()
+		body.scale = Vector3.ONE * Visuals.MINION.scale
+		actor.visual.add_child(body)
+		actor.animation = find_animation(body)
+		tint_minion(body)
+		actor.label = Label3D.new()
+		actor.add_child(actor.label)
+		add_child(actor)
+		enemies.append(actor)
+		room_actors[room - 1].append(actor)
+		set_active(actor, false)
+	if kind == "boss":
+		spawn("brute", center + Vector3(0, 0.05, 6), 4, Expedition.BOSS_TYPES[zone - 1])
+		var boss = enemies[-1]
+		boss.visual.get_child(0).scale *= Visuals.BOSS_SCALE
+		boss.set_meta("room", room)
+		room_actors[room - 1].append(boss)
+		set_active(boss, false)
+
+func door(at: Vector3, sideways: bool, opened: bool, secret: bool = false) -> void:
 	var width := 24.0 if sideways else 22.0
 	var piece := (width - 6.0) * 0.5
 	for side in [-1, 1]:
 		var offset: float = side * (3 + piece * 0.5)
 		box(self, Vector3(0.5, 7, piece) if sideways else Vector3(piece, 7, 0.5), at + Vector3(0 if sideways else offset, 3.5, offset if sideways else 0), stone, true)
 	box(self, Vector3(0.5, 2, 6) if sideways else Vector3(6, 2, 0.5), at + Vector3.UP * 6, stone, true)
-	var node := box(self, Vector3(0.25, 5, 5.8) if sideways else Vector3(5.8, 5, 0.25), at + Vector3.UP * 2.5, brass, true)
+	var node := box(self, Vector3(0.25, 5, 5.8) if sideways else Vector3(5.8, 5, 0.25), at + Vector3.UP * 2.5, stone if secret else brass, true)
 	gates.append(node)
 	gate(gates.size() - 1, opened)
 	var ward := box(self, Vector3(0.12, 5, 5.9) if sideways else Vector3(5.9, 5, 0.12), at + Vector3.UP * 2.5, ward_material(), true)
 	ward.set_meta("keep_material", true)
 	seals.append(ward)
 	seal(seals.size() - 1, false)
+	if secret: return
 	for side in [-1, 1]:
 		box(self, Vector3(0.12, 5, 0.12), at + Vector3(0 if sideways else side * 2.92, 2.5, side * 2.92 if sideways else 0), door_trim)

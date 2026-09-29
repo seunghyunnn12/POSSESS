@@ -5,6 +5,7 @@ const Build = preload("res://scripts/fun_augments.gd")
 var learned := false
 var fun_mode := true
 var world
+var map
 var visited: Array = []
 var cleared: Array = []
 var rewards: Array = []
@@ -24,16 +25,22 @@ var coins := 0
 var keys_found := 0
 var opened_doors := {}
 var potion_used := false
+var used_potions := {}
+var used_altars := {}
+var rewards_left := {}
+var secrets_opened := 0
 var key_warn_clock := 0.0
 var loot_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	super._ready()
-	room_total = Expedition.CELLS.size()
+	if map == null: map = Expedition.generate(run_seed)
+	room_total = map.size()
 	for room in range(1, room_total + 1):
 		visited.append(false)
-		cleared.append(room in Expedition.HUBS or room in Expedition.SPECIAL)
-		rewards.append(room in Expedition.HUBS or room == Expedition.FINAL or room == Expedition.MORGUE)
+		cleared.append(map.is_safe(room))
+		rewards.append(map.kind(room) in ["hub", "morgue", "sanctuary", "secret"])
+		if map.kind(room) == "trial": rewards_left[room] = 2
 	loot_rng.seed = run_seed + 911
 	while plans.size() <= room_total: plans.append(plans[1].duplicate(true))
 	room_index = 1
@@ -63,15 +70,22 @@ func skip_training() -> void:
 func enter_room(index: int) -> void:
 	if not is_multiplayer_authority() or index < 1 or index > room_total: return
 	room_index = index
+	world.populate(index)
 	actors = world.room_actors[index - 1]
-	if world.has_method("set_zone"): world.set_zone(Expedition.zone(index))
+	if world.has_method("set_zone"): world.set_zone(map.zone(index))
 	phase = "rest" if cleared[index - 1] else "combat"
-	if index in Expedition.HUBS or index in Expedition.SPECIAL:
+	if map.is_safe(index):
+		var first: bool = not visited[index - 1]
 		visited[index - 1] = true
 		spawn_queue.clear()
-		if index == Expedition.MORGUE:
+		if map.kind(index) == "morgue":
 			for actor in actors:
 				if actor.has_meta("price") and not actor.claimed: world.set_active(actor, true)
+		if first and map.kind(index) == "secret":
+			secrets_opened += 1
+			coins += 10
+			award_relic()
+			feedback.emit("secret_found", {"room": index})
 		return
 	if visited[index - 1]: return
 	visited[index - 1] = true
@@ -86,7 +100,7 @@ func enter_room(index: int) -> void:
 	invulnerable = maxf(invulnerable, 1)
 
 func activate_hosts() -> void:
-	if room_index in Expedition.HUBS: return
+	if map.is_safe(room_index): return
 	for actor in actors:
 		if actor.has_meta("fodder"): continue
 		if tutorial and actor != actors[0]: continue
@@ -136,7 +150,9 @@ func finish(result: String) -> void:
 	if result == "CLEAR":
 		phase = "rest"
 		cleared[room_index - 1] = true
-		if room_index == Expedition.FINAL: bosses_defeated = 1
+		if map.kind(room_index) == "boss":
+			bosses_defeated += 1
+			award_relic()
 		clear_pending = false
 		projectiles.clear()
 		hazards.clear()
@@ -182,6 +198,8 @@ func open_reward() -> void:
 	if pool.is_empty():
 		rewards[room_index - 1] = true
 		return
+	# A treasure room pays out at its chest, not anywhere in the room.
+	if map.kind(room_index) == "treasure" and player.position.distance_to(map.center(room_index)) > 3.5: return
 	var family := Build.family(body_kind if state == State.Body else last_body)
 	for category in [0, 1, 2]:
 		var candidates: Array[String] = []
@@ -202,8 +220,12 @@ func choose_upgrade(index: int) -> void:
 	var old_max := decay_max
 	var old_mag := magazine_size()
 	var id := upgrade_choices[index]
-	upgrades[id] = 2 if room_index == Expedition.TREASURE else rank_of(id) + 1
-	rewards[room_index - 1] = true
+	upgrades[id] = 2 if map.kind(room_index) == "treasure" else rank_of(id) + 1
+	if rewards_left.has(room_index):
+		rewards_left[room_index] -= 1
+		rewards[room_index - 1] = rewards_left[room_index] <= 0
+	else:
+		rewards[room_index - 1] = true
 	if state == State.Body:
 		decay_max = current_stats().life
 		decay = decay / maxf(old_max, 0.01) * decay_max
@@ -279,8 +301,38 @@ func projectile_source(projectile: Dictionary) -> void:
 	damage_source = {"fire": "화염구", "ice": "서리 화살", "shock": "번개"}.get(projectile.element, "투사체")
 
 func eject(explode: bool) -> void:
+	if state != State.Body:
+		super.eject(explode)
+		return
+	var crack := near_crack()
+	# Throwing a body against a cracked wall always detonates it: that is how secrets open.
+	if crack >= 0: explode = true
 	if explode and decay <= 0 and broken_by.is_empty(): broken_by = "자연 부패로 몸이 무너진"
 	super.eject(explode)
+	if explode and crack >= 0:
+		opened_doors[crack] = true
+		world.break_crack(crack)
+		refresh_gates()
+		feedback.emit("wall_broken", {"edge": crack})
+
+func near_crack() -> int:
+	for edge in world.cracks:
+		if not room_index in map.links[edge]: continue
+		var flat: Vector3 = player.position - world.cracks[edge].at
+		flat.y = 0
+		if flat.length() < 3.6: return edge
+	return -1
+
+## Short prompt for whatever the player is standing next to.
+func context_hint() -> String:
+	if near_crack() >= 0:
+		return "금 간 벽 · [E] 몸을 던져 터뜨리기" if state == State.Body else "금 간 벽 · 몸이 있어야 무너뜨릴 수 있다"
+	if phase == "rest" and map.kind(room_index) == "sanctuary" and not used_altars.has(room_index) and player.position.distance_to(map.center(room_index)) < 3.2:
+		return "[F] 촛불 성소 · 몸의 수명을 모두 되돌린다" if state == State.Body else "촛불 성소 · 몸이 있어야 축복을 받는다"
+	if phase == "rest" and map.kind(room_index) == "treasure" and not rewards[room_index - 1] and player.position.distance_to(map.center(room_index)) < 3.5:
+		return "[F] 보물 상자 열기"
+	return ""
+
 
 func tick_enemy(actor, dt: float) -> void:
 	if phase != "combat": return
@@ -341,20 +393,21 @@ func _physics_process(dt: float) -> void:
 		if intent.interact: open_reward()
 		if is_frozen(): return
 		tick_key_doors()
-		if room_index == Expedition.MORGUE and intent.interact: buy_potion()
-		for edge_index in Expedition.LINKS.size():
-			var edge: Array = Expedition.LINKS[edge_index]
+		if map.kind(room_index) == "morgue" and intent.interact: buy_potion()
+		if map.kind(room_index) == "sanctuary" and intent.interact: pray()
+		for edge_index in map.links.size():
+			var edge: Array = map.links[edge_index]
 			if not room_index in edge or world.is_blocked(edge_index): continue
 			var next: int = edge[1] if room_index == edge[0] else edge[0]
-			var from: Vector3 = Expedition.center(room_index)
-			var to: Vector3 = Expedition.center(next)
+			var from: Vector3 = map.center(room_index)
+			var to: Vector3 = map.center(next)
 			var direction := (to - from).normalized()
 			var midpoint := (from + to) * 0.5
 			var offset: Vector3 = player.position - midpoint
 			if offset.dot(direction) > 1.0 and absf(offset.dot(Vector3(-direction.z, 0, direction.x))) < 3.0:
 				enter_room(next)
 				break
-		if room_index == Expedition.FINAL and cleared[Expedition.FINAL - 1] and player.position.z > Expedition.center(Expedition.FINAL).z + 15:
+		if room_index == map.final and cleared[map.final - 1] and player.position.z > map.center(map.final).z + 15:
 			outcome = "CLEAR"
 			focus_left = 0
 			Engine.time_scale = 1
@@ -362,32 +415,33 @@ func _physics_process(dt: float) -> void:
 			feedback.emit("end", {"result": outcome})
 
 func refresh_gates() -> void:
-	for i in Expedition.LINKS.size():
-		var edge: Array = Expedition.LINKS[i]
+	for i in map.links.size():
+		var edge: Array = map.links[i]
 		var fighting_here: bool = phase == "combat" and room_index in edge
-		var locked: bool = not Expedition.unlocked(i, cleared) or (i in Expedition.KEY_DOORS and not opened_doors.has(i))
+		var locked: bool = (map.key_doors.has(i) or map.secret_doors.has(i)) and not opened_doors.has(i)
 		world.gate(i, not locked)
 		world.seal(i, fighting_here and not locked)
-	world.gate(Expedition.LINKS.size(), cleared[Expedition.FINAL - 1])
+	world.gate(map.exit_door(), cleared[map.final - 1])
 
 func grant_clear_loot() -> void:
-	if room_index in Expedition.HUBS or room_index in Expedition.SPECIAL: return
-	coins += 5
-	var combat_cleared := 0
+	if not map.fights(room_index): return
+	var boss: bool = map.kind(room_index) == "boss"
+	coins += 15 if boss else 5
+	var fights_cleared := 0
 	for room in range(1, room_total + 1):
-		if cleared[room - 1] and not room in Expedition.HUBS and not room in Expedition.SPECIAL: combat_cleared += 1
-	# The first cleared fight always pays a key so the treasure room is reachable; later fights are a gamble.
-	if room_index != Expedition.FINAL and ((keys_found == 0 and combat_cleared == 1) or loot_rng.randf() < 0.3):
+		if cleared[room - 1] and map.fights(room): fights_cleared += 1
+	# First cleared fight always pays a key; non-final bosses always do; other fights are a gamble.
+	if (keys_found == 0 and fights_cleared == 1) or (boss and room_index != map.final) or (not boss and loot_rng.randf() < 0.25):
 		keys += 1
 		keys_found += 1
 		feedback.emit("key_found", {"keys": keys})
 
 func tick_key_doors() -> void:
-	for edge_index in Expedition.KEY_DOORS:
+	for edge_index in map.key_doors:
 		if opened_doors.has(edge_index): continue
-		var edge: Array = Expedition.LINKS[edge_index]
+		var edge: Array = map.links[edge_index]
 		if not room_index in edge: continue
-		var at: Vector3 = (Expedition.center(edge[0]) + Expedition.center(edge[1])) * 0.5
+		var at: Vector3 = (map.center(edge[0]) + map.center(edge[1])) * 0.5
 		var flat: Vector3 = player.position - at
 		flat.y = 0
 		if flat.length() > 3.5: continue
@@ -395,21 +449,45 @@ func tick_key_doors() -> void:
 			keys -= 1
 			opened_doors[edge_index] = true
 			refresh_gates()
-			feedback.emit("door_unlocked", {"room": Expedition.KEY_DOORS[edge_index]})
+			feedback.emit("door_unlocked", {"room": map.key_doors[edge_index]})
 		elif key_warn_clock <= 0:
 			key_warn_clock = 2.5
 			feedback.emit("door_needs_key", {})
 
 func buy_potion() -> void:
-	if potion_used or state != State.Body or not is_instance_valid(world.potion): return
-	if player.position.distance_to(world.potion.global_position) > 2.8: return
+	var flask = world.potions.get(room_index)
+	if used_potions.has(room_index) or state != State.Body or not is_instance_valid(flask): return
+	if player.position.distance_to(flask.global_position) > 2.8: return
 	if coins < Expedition.POTION_PRICE:
 		if key_warn_clock <= 0:
 			key_warn_clock = 1.5
 			feedback.emit("too_poor", {"price": Expedition.POTION_PRICE, "coins": coins})
 		return
 	coins -= Expedition.POTION_PRICE
+	used_potions[room_index] = true
 	potion_used = true
 	decay = decay_max
-	world.potion.hide()
+	flask.hide()
 	feedback.emit("potion", {})
+
+func pray() -> void:
+	if used_altars.has(room_index) or player.position.distance_to(map.center(room_index)) > 3.2: return
+	if state != State.Body:
+		if key_warn_clock <= 0:
+			key_warn_clock = 2.0
+			feedback.emit("need_body", {})
+		return
+	used_altars[room_index] = true
+	decay = decay_max
+	feedback.emit("blessing", {})
+
+## Only three relics exist; once all are owned a relic reward pays bone coins instead.
+func award_relic() -> void:
+	var owned_all := true
+	for id in RELICS:
+		if not relics.has(id): owned_all = false
+	if not owned_all:
+		super.award_relic()
+		return
+	coins += 20
+	announce("유물을 모두 모았습니다 · 대신 뼈 동전 20")

@@ -147,7 +147,7 @@ func on_feedback(event: String, data: Dictionary) -> void:
 	if authority.get("fun_mode") == true and event in ["room_clear", "combat_start", "start", "reinforcements"]: return
 	if event in ["hit", "weapon_fire", "shot"] and data.get("hit", event == "hit"):
 		impact_requested.emit()
-	var messages := {"sealed": "TOAST_SEALED", "unsealed": "TOAST_UNSEALED", "key_found": "TOAST_KEY", "door_unlocked": "TOAST_DOOR_UNLOCKED", "door_needs_key": "TOAST_NEED_KEY", "purchase": "TOAST_PURCHASE", "too_poor": "TOAST_TOO_POOR", "potion": "TOAST_POTION", "inhabit": "TOAST_INHABIT", "exposed": "TOAST_EXPOSED", "rejected": "TOAST_REJECTED", "unreachable": "TOAST_UNREACHABLE", "soul_focus": "TOAST_FOCUS", "supply": "TOAST_SUPPLY", "room_clear": "TOAST_CLEAR", "reinforcements": "TOAST_WAVE", "loaded": "TOAST_LOADED", "upgrade_chosen": "TOAST_UPGRADE", "milestone": "TOAST_MILESTONE", "element_notice": "TOAST_ELEMENT", "detection": "TOAST_DETECTION", "start": "TOAST_START", "combat_start": "TOAST_COMBAT", "level_ready": "TOAST_LEVEL", "boss_warning": "TOAST_BOSS"}
+	var messages := {"secret_found": "TOAST_SECRET", "wall_broken": "TOAST_WALL", "blessing": "TOAST_BLESSING", "need_body": "TOAST_NEED_BODY", "sealed": "TOAST_SEALED", "unsealed": "TOAST_UNSEALED", "key_found": "TOAST_KEY", "door_unlocked": "TOAST_DOOR_UNLOCKED", "door_needs_key": "TOAST_NEED_KEY", "purchase": "TOAST_PURCHASE", "too_poor": "TOAST_TOO_POOR", "potion": "TOAST_POTION", "inhabit": "TOAST_INHABIT", "exposed": "TOAST_EXPOSED", "rejected": "TOAST_REJECTED", "unreachable": "TOAST_UNREACHABLE", "soul_focus": "TOAST_FOCUS", "supply": "TOAST_SUPPLY", "room_clear": "TOAST_CLEAR", "reinforcements": "TOAST_WAVE", "loaded": "TOAST_LOADED", "upgrade_chosen": "TOAST_UPGRADE", "milestone": "TOAST_MILESTONE", "element_notice": "TOAST_ELEMENT", "detection": "TOAST_DETECTION", "start": "TOAST_START", "combat_start": "TOAST_COMBAT", "level_ready": "TOAST_LEVEL", "boss_warning": "TOAST_BOSS"}
 	if event == "lesson":
 		toast_requested.emit(["TRAIN_MOVE", "TRAIN_WEAKEN", "TRAIN_POSSESS", "TRAIN_INSPECT", "TRAIN_SUPPLY", "TRAIN_ATTACK", "TRAIN_EJECT", "TRAIN_DOOR"][data.step])
 	elif event == "combat_start" and authority.get("room_index") in [3, 7]:
@@ -160,13 +160,14 @@ func on_feedback(event: String, data: Dictionary) -> void:
 func fun_snapshot(state: Dictionary) -> void:
 	var a = authority
 	state.fun = true
-	var expedition = preload("res://scripts/expedition.gd")
-	state.zone = expedition.zone(a.room_index)
-	state.stage = "%d / 3구역 · %s" % [state.zone, expedition.NAMES[a.room_index - 1]]
-	state.hub = a.room_index in expedition.HUBS
-	state.final_room = a.room_index == expedition.FINAL
-	var hub: int = expedition.HUBS[state.zone - 1]
-	state.zone_ready = a.cleared[hub] and a.cleared[hub + 1]
+	var map = a.map
+	state.map = map
+	state.zone = map.zone(a.room_index)
+	state.kind = map.kind(a.room_index)
+	state.stage = "%d / 3구역 · %s" % [state.zone, map.names[a.room_index - 1]]
+	state.hub = state.kind == "hub"
+	state.final_room = a.room_index == map.final
+	state.zone_ready = false
 	state.rewards = a.rewards.duplicate()
 	state.enemies = str(a.remaining() + a.spawn_queue.size())
 	state.soul = "영혼 Lv.%d · 피해 +%d%% · %d/%d" % [a.level, a.essence * 3, a.xp, a.xp_next]
@@ -181,9 +182,12 @@ func fun_snapshot(state: Dictionary) -> void:
 	state.death_reason = a.death_reason
 	state.keys = a.keys
 	state.coins = a.coins
-	state.treasure = a.room_index == expedition.TREASURE
-	state.morgue = a.room_index == expedition.MORGUE
-	state.potion_used = a.potion_used
+	state.treasure = state.kind == "treasure"
+	state.morgue = state.kind == "morgue"
+	state.potion_used = a.used_potions.has(a.room_index)
+	state.relics = a.relics.size()
+	var hint: String = a.context_hint()
+	if hint != "" and state.interaction == "": state.interaction = hint
 	var aimed = a.aimed_actor()
 	if is_instance_valid(aimed) and aimed.has_meta("price"):
 		state.interaction = "우클릭 · 뼈 동전 %d로 이 몸 사기" % aimed.get_meta("price") if a.coins >= aimed.get_meta("price") else "뼈 동전 부족 · %d / %d" % [a.coins, aimed.get_meta("price")]
