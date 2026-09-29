@@ -457,6 +457,50 @@ func stop_impact(actor) -> void:
 	actor.visual.rotation.z = 0.0
 	actor.visual.position = Vector3.ZERO
 
+## First-run shader warm-up: draw every model, effect and projectile once in front
+## of the camera (behind the title UI) so the GPU compiles them before play.
+var warm_nodes: Array[Node] = []
+
+func warmup() -> void:
+	var ahead: Vector3 = camera.global_position + camera.global_basis * Vector3(0, -0.2, -3.2)
+	var side: Vector3 = camera.global_basis * Vector3(1, 0, 0)
+	var colors := [Color("ffb86e"), Color("c6a0ff"), Color("ff8660"), Color("78dfff"), Color("b8b0a0"), Color("7cffd3")]
+	for kind in ["spark", "smoke", "bone", "inward"]:
+		for c in colors:
+			emit_particles(ahead + side * randf_range(-1, 1), c, kind, 4, 0.2)
+	for c in colors:
+		burst(ahead, c, 0.4)
+		beam(ahead - side, ahead + side, c, 0.2)
+		var ball := Arena.sphere(self, 0.16, ahead, Arena.material(c, 0.6))
+		warm_nodes.append(ball)
+		var bolt := Arena.box(self, Vector3(0.03, 0.03, 0.65), ahead, Arena.material(c, 0.6))
+		warm_nodes.append(bolt)
+	muzzle(Color("ffb86e"))
+	muzzle(Color("c6a0ff"))
+	var world = authority.get("world")
+	if world != null and world.has_method("ward_material"):
+		var ward := Arena.box(self, Vector3(2, 2, 0.12), ahead, world.ward_material())
+		warm_nodes.append(ward)
+	var paths: Array = [Visuals.MINION.path]
+	for kind in Visuals.MODELS: paths.append(Visuals.MODELS[kind].path)
+	for kind in Visuals.PROPS: paths.append(Visuals.PROPS[kind])
+	var i := 0
+	for path in paths:
+		var scene = load(path)
+		if scene == null: continue
+		var node: Node3D = scene.instantiate()
+		node.position = ahead + side * (float(i % 5) - 2.0) * 0.6
+		node.scale = Vector3.ONE * 0.3
+		add_child(node)
+		warm_nodes.append(node)
+		var player = node.find_child("AnimationPlayer", true, false)
+		if player != null and player.has_animation(Visuals.HIT_CLIPS[0]): player.play(Visuals.HIT_CLIPS[0])
+		i += 1
+	get_tree().create_timer(0.6).timeout.connect(func():
+		for node in warm_nodes:
+			if is_instance_valid(node): node.queue_free()
+		warm_nodes.clear())
+
 func clear_effects() -> void:
 	for tween in fx_tweens:
 		if tween.is_valid(): tween.kill()

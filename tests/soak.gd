@@ -18,6 +18,7 @@ func fight(ticks_live: int) -> void:
 		if sim.state == sim.State.Body: sim.decay = maxf(sim.decay, 5.0)
 		var targets: Array = sim.actors.filter(func(a): return a.alive and not a.claimed and not a.has_meta("price"))
 		if not targets.is_empty() and i % 10 == 0: aim_point(targets[0].position + Vector3.UP)
+		if not sim.upgrade_choices.is_empty(): sim.choose_upgrade(i % sim.upgrade_choices.size())
 		sim.submit_input(Vector2.ZERO, i % 3 != 0, Vector2(sim.yaw, sim.pitch))
 		sim._physics_process(1.0 / 60)
 		await physics_frame
@@ -31,6 +32,8 @@ func fight(ticks_live: int) -> void:
 	await ticks(20)
 
 func take_rewards() -> void:
+	sim.pending_levels = 0
+	while not sim.upgrade_choices.is_empty(): sim.choose_upgrade(0)
 	for n in 2:
 		if sim.rewards[sim.room_index - 1]: return
 		sim.player.position = map.center(sim.room_index) + Vector3(1.5, 0.05, 0)
@@ -43,6 +46,7 @@ func borrow_body() -> void:
 		if actor.alive and not actor.claimed and not actor.has_meta("fodder") and not actor.profile.get("boss", false) and not actor.has_meta("price"):
 			sim.begin_possession(actor)
 			await ticks(50)
+			while not sim.upgrade_choices.is_empty(): sim.choose_upgrade(0)
 			return
 
 func run_seed(seed_value: int) -> void:

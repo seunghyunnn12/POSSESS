@@ -31,11 +31,17 @@ func go(room: int, offset: Vector3 = Vector3.ZERO) -> void:
 	sim.enter_room(room)
 
 func clear_current() -> void:
+	drain_levelups()
 	sim.spawn_queue.clear()
 	for actor in sim.actors:
 		if actor.alive and not actor.claimed and not actor.has_meta("price"): sim.damage_enemy(actor, 99999)
 	sim.check_clear()
 	sim.resolve_flow()
+	drain_levelups()
+
+func drain_levelups() -> void:
+	sim.pending_levels = 0
+	while not sim.upgrade_choices.is_empty(): sim.choose_upgrade(0)
 
 func possess_here() -> void:
 	var host = null
@@ -46,6 +52,7 @@ func possess_here() -> void:
 	if host == null: return
 	sim.begin_possession(host)
 	await ticks(60)
+	drain_levelups()
 
 func run() -> void:
 	game = Main.new()
@@ -201,6 +208,45 @@ func run() -> void:
 	sim.player.position = Vector3(flask.global_position.x - 1.2, 0.05, flask.global_position.z)
 	sim.buy_potion()
 	check(is_equal_approx(sim.decay, sim.decay_max) and sim.coins == 5, "embalming fluid restores the body for its price")
+
+	# Level-up mid-fight: time stops for a three-way augment choice.
+	var arena_room := -1
+	for room in range(1, map.size() + 1):
+		if map.kind(room) == "combat" and not sim.visited[room - 1]: arena_room = room
+	go(arena_room)
+	drain_levelups()
+	sim.state = sim.State.Soul
+	sim.body_profile.clear()
+	sim.body_kind = ""
+	var level_before: int = sim.level
+	sim.gain_xp(sim.xp_next)
+	await ticks(2)
+	check(sim.level == level_before + 1 and sim.upgrade_choices.size() == 3 and sim.levelup_offer and sim.is_frozen(), "a level-up mid-fight freezes time and offers three augments")
+	var lvl_pick: String = sim.upgrade_choices[0]
+	var lvl_rank: int = sim.rank_of(lvl_pick)
+	sim.choose_upgrade(0)
+	check(sim.rank_of(lvl_pick) == lvl_rank + 1 and not sim.is_frozen() and not sim.levelup_offer, "picking resumes the fight and raises the augment one rank")
+	check(not sim.rewards[arena_room - 1], "a level-up does not use up the room's own reward slot")
+
+	# A ghost with nothing to borrow is off the clock, and a body walks in.
+	for actor in sim.actors:
+		if actor.alive and not actor.has_meta("fodder"): sim.damage_enemy(actor, 99999)
+	var fodder_left: Array = sim.actors.filter(func(a): return a.alive and a.has_meta("fodder"))
+	if fodder_left.is_empty() and not sim.spawn_queue.is_empty():
+		sim.world.set_active(sim.spawn_queue.pop_front(), true)
+	sim.invulnerable = 999
+	sim.soul = 12.0
+	check(not sim.host_available() and sim.timers_safe(), "no borrowable body: the ghost clock stops")
+	await ticks(60)
+	check(is_equal_approx(sim.soul, 12.0), "ghost time does not drain while nothing can be borrowed")
+	await ticks(120)
+	drain_levelups()
+	check(sim.host_available() and sim.reinforcements >= 1, "a borrowable body walks in")
+	await ticks(30)
+	check(sim.soul < 12.0, "with a body to borrow, the ghost clock runs again")
+	sim.invulnerable = 0
+	clear_current()
+	go(morgue, Vector3(2, 0, 0))
 
 	game.ui_presenter.refresh()
 	await process_frame

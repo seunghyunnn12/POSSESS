@@ -184,6 +184,7 @@ var title_clock := 0.0
 ## Before the run starts, the camera drifts slowly around the start room behind the title.
 func _process(dt: float) -> void:
 	if not fun_run or authority == null or authority.running: return
+	if title_clock == 0.0: presentation.warmup.call_deferred()
 	title_clock += dt
 	# From a back corner, look diagonally across the room toward the far torches.
 	aim = Vector2(-0.75 + sin(title_clock * 0.11) * 0.28, -0.02 + sin(title_clock * 0.07) * 0.03)

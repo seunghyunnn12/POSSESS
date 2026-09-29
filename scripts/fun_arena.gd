@@ -11,6 +11,7 @@ var gates: Array = []
 var seals: Array = []
 var map
 var populated: Array = []
+var jobs := {}
 var potions := {}
 var altars := {}
 var morgue_slots := {}
@@ -131,6 +132,12 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	clock += dt
 	if dresser != null: dresser.tick(clock)
+	# Build upcoming rooms while nothing is happening (title, rest), never mid-fight.
+	if source != null and map != null:
+		var budget := 0
+		if not source.running: budget = 8000
+		elif source.phase != "combat" and not source.is_frozen(): budget = 3000
+		if budget > 0: prepare(prep_order(source.room_index), budget)
 	if source == null: return
 	var soul := 0.0 if source.state == 2 else 1.0
 	if soul == background_soul: return
@@ -158,6 +165,26 @@ func tint_minion(node: Node) -> void:
 				tinted.albedo_color = Color("89858b")
 				node.set_surface_override_material(surface, tinted)
 	for child in node.get_children(): tint_minion(child)
+
+var order_cache := {}
+
+## Rooms to prepare, nearest first by doors from `room`.
+func prep_order(room: int) -> Array:
+	if order_cache.has(room): return order_cache[room]
+	var seen := {room: true}
+	var todo := [room]
+	var result: Array = []
+	while not todo.is_empty():
+		var r: int = todo.pop_front()
+		if map.fights(r) or map.kind(r) == "morgue": result.append(r)
+		for e in map.links:
+			if r in e:
+				var o: int = e[1] if e[0] == r else e[0]
+				if not seen.has(o):
+					seen[o] = true
+					todo.append(o)
+	order_cache[room] = result
+	return result
 
 func set_active(actor, active: bool) -> void:
 	actor.alive = active
@@ -283,72 +310,124 @@ func break_crack(edge: int) -> void:
 	cracks.erase(edge)
 
 ## Enemies and wares are created the first time a room is entered.
-func populate(room: int) -> void:
-	if populated[room - 1]: return
-	populated[room - 1] = true
+## Enemies are built in small jobs so rooms can be prepared a few actors per frame
+## while nothing is happening, instead of all at once at the doorway.
+func plan(room: int) -> void:
+	if populated[room - 1] or jobs.has(room): return
+	var list: Array = []
 	var center: Vector3 = map.center(room)
 	var kind: String = map.kind(room)
 	if kind == "morgue":
 		for entry in morgue_slots.get(room, []):
-			spawn(entry[0], entry[1] + Vector3(0, 0.05, 0), 999, "preserved")
-			var actor = enemies[-1]
-			actor.rotation.y = -PI * 0.5
-			actor.rewarded = true
-			actor.set_meta("price", Expedition.PRICES[entry[0]])
-			actor.set_meta("room", room)
-			room_actors[room - 1].append(actor)
-			set_active(actor, false)
-		return
-	if not map.fights(room): return
-	var zone: int = map.zone(room)
-	var roles := ["soldier", "shotgun", "brute", "mage", "archer", "storm"]
-	for i in range(roles.size() - 1, 0, -1):
-		var j := rolls.randi_range(0, i)
-		var saved = roles[i]
-		roles[i] = roles[j]
-		roles[j] = saved
-	var hosts := 5 if kind == "trial" else 4
-	var elite := ["swift", "preserved", "frenzied", "seer"]
-	for i in hosts:
-		var trait_id: String = elite[rolls.randi_range(0, elite.size() - 1)] if kind == "trial" or (zone > 1 and rolls.randf() < 0.25 * (zone - 1)) else "common"
-		spawn(roles[i], center + Vector3([-2, 5, -5, 2, 0][i], 0.05, [3, -5, -6, -8, -2][i]), 2.5 + i * 0.3, trait_id)
-		var actor = enemies[-1]
-		if kind == "trial":
-			actor.max_hp *= 1.35
-			actor.hp = actor.max_hp
-		actor.set_meta("room", room)
-		room_actors[room - 1].append(actor)
-		set_active(actor, false)
-	var fodder := 18 if kind == "boss" else (26 if kind == "trial" else 30 + (zone - 1) * 4)
-	for i in fodder:
-		var actor := Actor.new()
-		actor.setup("soldier")
-		actor.set_meta("fodder", true)
-		actor.set_meta("room", room)
-		actor.position = center + Vector3(9 if i % 2 == 0 else -9, 0.05, (5 if i % 4 < 2 else -7))
-		actor.home = actor.position
-		actor.max_hp = 22 * (1.5 if kind == "trial" else 1.0) * (1.0 + 0.15 * (zone - 1))
+			list.append(func(): make_ware(room, entry))
+	elif map.fights(room):
+		var zone: int = map.zone(room)
+		var roles := ["soldier", "shotgun", "brute", "mage", "archer", "storm"]
+		for i in range(roles.size() - 1, 0, -1):
+			var j := rolls.randi_range(0, i)
+			var saved = roles[i]
+			roles[i] = roles[j]
+			roles[j] = saved
+		var hosts := 5 if kind == "trial" else 4
+		var elite := ["swift", "preserved", "frenzied", "seer"]
+		for i in hosts:
+			var trait_id: String = elite[rolls.randi_range(0, elite.size() - 1)] if kind == "trial" or (zone > 1 and rolls.randf() < 0.25 * (zone - 1)) else "common"
+			var at := center + Vector3([-2, 5, -5, 2, 0][i], 0.05, [3, -5, -6, -8, -2][i])
+			var role: String = roles[i]
+			list.append(func(): make_host(room, role, at, 2.5 + i * 0.3, trait_id, kind == "trial"))
+		var fodder := 18 if kind == "boss" else (26 if kind == "trial" else 30 + (zone - 1) * 4)
+		for i in fodder:
+			list.append(func(): make_fodder(room, i))
+		if kind == "boss":
+			list.append(func(): make_boss(room))
+	jobs[room] = list
+
+func run_jobs(room: int, deadline_usec: int = -1) -> void:
+	var list: Array = jobs.get(room, [])
+	while not list.is_empty():
+		if deadline_usec > 0 and Time.get_ticks_usec() > deadline_usec: return
+		list.pop_front().call()
+	jobs.erase(room)
+	populated[room - 1] = true
+
+func populate(room: int) -> void:
+	if populated[room - 1]: return
+	plan(room)
+	run_jobs(room)
+
+## Build ahead: rooms nearest the player first, within a time budget per frame.
+func prepare(order: Array, budget_usec: int) -> void:
+	var deadline := Time.get_ticks_usec() + budget_usec
+	for room in order:
+		if populated[room - 1]: continue
+		plan(room)
+		run_jobs(room, deadline)
+		if Time.get_ticks_usec() > deadline: return
+
+func make_ware(room: int, entry: Array) -> void:
+	spawn(entry[0], entry[1] + Vector3(0, 0.05, 0), 999, "preserved")
+	var actor = enemies[-1]
+	actor.rotation.y = -PI * 0.5
+	actor.rewarded = true
+	actor.set_meta("price", Expedition.PRICES[entry[0]])
+	actor.set_meta("room", room)
+	room_actors[room - 1].append(actor)
+	set_active(actor, false)
+
+func make_host(room: int, role: String, at: Vector3, delay: float, trait_id: String, tough: bool) -> void:
+	spawn(role, at, delay, trait_id)
+	var actor = enemies[-1]
+	if tough:
+		actor.max_hp *= 1.35
 		actor.hp = actor.max_hp
-		actor.visual = Node3D.new()
-		actor.add_child(actor.visual)
-		var body = load(Visuals.MINION.path).instantiate()
-		body.scale = Vector3.ONE * Visuals.MINION.scale
-		actor.visual.add_child(body)
-		actor.animation = find_animation(body)
-		tint_minion(body)
-		actor.label = Label3D.new()
-		actor.add_child(actor.label)
-		add_child(actor)
-		enemies.append(actor)
-		room_actors[room - 1].append(actor)
-		set_active(actor, false)
-	if kind == "boss":
-		spawn("brute", center + Vector3(0, 0.05, 6), 4, Expedition.BOSS_TYPES[zone - 1])
-		var boss = enemies[-1]
-		boss.visual.get_child(0).scale *= Visuals.BOSS_SCALE
-		boss.set_meta("room", room)
-		room_actors[room - 1].append(boss)
-		set_active(boss, false)
+	actor.set_meta("room", room)
+	room_actors[room - 1].append(actor)
+	set_active(actor, false)
+
+func make_fodder(room: int, i: int) -> void:
+	var center: Vector3 = map.center(room)
+	var kind: String = map.kind(room)
+	var zone: int = map.zone(room)
+	var actor := Actor.new()
+	actor.setup("soldier")
+	actor.set_meta("fodder", true)
+	actor.set_meta("room", room)
+	actor.position = center + Vector3(9 if i % 2 == 0 else -9, 0.05, (5 if i % 4 < 2 else -7))
+	actor.home = actor.position
+	actor.max_hp = 22 * (1.5 if kind == "trial" else 1.0) * (1.0 + 0.15 * (zone - 1))
+	actor.hp = actor.max_hp
+	actor.visual = Node3D.new()
+	actor.add_child(actor.visual)
+	var body = load(Visuals.MINION.path).instantiate()
+	body.scale = Vector3.ONE * Visuals.MINION.scale
+	actor.visual.add_child(body)
+	actor.animation = find_animation(body)
+	tint_minion(body)
+	actor.label = Label3D.new()
+	actor.add_child(actor.label)
+	add_child(actor)
+	enemies.append(actor)
+	room_actors[room - 1].append(actor)
+	set_active(actor, false)
+
+func make_boss(room: int) -> void:
+	spawn("brute", map.center(room) + Vector3(0, 0.05, 6), 4, Expedition.BOSS_TYPES[map.zone(room) - 1])
+	var boss = enemies[-1]
+	boss.visual.get_child(0).scale *= Visuals.BOSS_SCALE
+	boss.set_meta("room", room)
+	room_actors[room - 1].append(boss)
+	set_active(boss, false)
+
+## A fresh borrowable body walks in when a fight has none left.
+func reinforce(room: int, at: Vector3) -> Node:
+	var roles := ["soldier", "shotgun", "brute", "mage", "archer", "storm"]
+	spawn(roles[rolls.randi_range(0, roles.size() - 1)], at, 2.5, "common")
+	var actor = enemies[-1]
+	actor.set_meta("room", room)
+	actor.set_meta("reinforcement", true)
+	room_actors[room - 1].append(actor)
+	set_active(actor, true)
+	return actor
 
 func door(at: Vector3, sideways: bool, opened: bool, secret: bool = false) -> void:
 	var width := 24.0 if sideways else 22.0

@@ -77,6 +77,8 @@ func present(state: Dictionary) -> void:
 	hint.text = ""
 	if state.tutorial:
 		hint.text = "[Tab] 건너뛰기\n" + ("WASD 이동 · 마우스로 둘러보고 문을 고르세요" if state.hub else ("W/A/S/D 이동 · 좌클릭으로 적을 쏴서 약하게 만드세요" if state.tutorial_step == 0 else "빙의 확률이 올랐습니다 · 가까이 가서 우클릭으로 몸을 빼앗으세요"))
+	elif state.get("no_host", false):
+		hint.text = "빌릴 몸이 없어 유령의 시간이 멈췄습니다 · 곧 새 몸이 걸어 들어옵니다"
 	elif state.hub:
 		hint.text = "문을 골라 탐험하세요 · 구역 끝의 보스를 쓰러뜨리면 다음 구역이 열립니다"
 	elif state.kind == "treasure" and state.reward_ready:

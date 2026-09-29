@@ -29,6 +29,9 @@ var used_potions := {}
 var used_altars := {}
 var rewards_left := {}
 var secrets_opened := 0
+var levelup_offer := false
+var no_host_clock := 0.0
+var reinforcements := 0
 var key_warn_clock := 0.0
 var loot_rng := RandomNumberGenerator.new()
 
@@ -115,7 +118,14 @@ func remaining() -> int:
 	return count
 
 func timers_safe() -> bool:
-	return state == State.Soul and phase != "combat"
+	return state == State.Soul and (phase != "combat" or not host_available())
+
+## Is there a body in this fight the ghost could borrow right now?
+func host_available() -> bool:
+	for actor in actors:
+		if actor.alive and not actor.claimed and not actor.has_meta("fodder") and not actor.has_meta("price") and not actor.profile.get("boss", false):
+			return true
+	return false
 
 func route_pending() -> bool:
 	return false
@@ -135,6 +145,7 @@ func gain_xp(amount: int) -> void:
 		xp -= xp_next
 		level += 1
 		xp_next += 20
+		pending_levels += 1
 	# Keep the existing automatic essence growth; XP never opens a combat menu.
 	essence = mini(10, level - 1)
 
@@ -150,6 +161,7 @@ func finish(result: String) -> void:
 	if result == "CLEAR":
 		phase = "rest"
 		cleared[room_index - 1] = true
+		if map.kind(room_index) == "combat": rewards[room_index - 1] = true
 		if map.kind(room_index) == "boss":
 			bosses_defeated += 1
 			award_relic()
@@ -200,6 +212,19 @@ func open_reward() -> void:
 		return
 	# A treasure room pays out at its chest, not anywhere in the room.
 	if map.kind(room_index) == "treasure" and player.position.distance_to(map.center(room_index)) > 3.5: return
+	levelup_offer = false
+	offer_augments(pool)
+
+## Level-up: time stops and the soul picks one of three augments, mid-fight.
+func open_levelup() -> void:
+	var pool := available_augments()
+	pending_levels -= 1
+	if pool.is_empty(): return
+	levelup_offer = true
+	offer_augments(pool)
+	feedback.emit("level_up", {"level": level})
+
+func offer_augments(pool: Array[String]) -> void:
 	var family := Build.family(body_kind if state == State.Body else last_body)
 	for category in [0, 1, 2]:
 		var candidates: Array[String] = []
@@ -220,8 +245,10 @@ func choose_upgrade(index: int) -> void:
 	var old_max := decay_max
 	var old_mag := magazine_size()
 	var id := upgrade_choices[index]
-	upgrades[id] = 2 if map.kind(room_index) == "treasure" else rank_of(id) + 1
-	if rewards_left.has(room_index):
+	upgrades[id] = 2 if map.kind(room_index) == "treasure" and not levelup_offer else rank_of(id) + 1
+	if levelup_offer:
+		levelup_offer = false
+	elif rewards_left.has(room_index):
 		rewards_left[room_index] -= 1
 		rewards[room_index - 1] = rewards_left[room_index] <= 0
 	else:
@@ -382,6 +409,23 @@ func _physics_process(dt: float) -> void:
 				world.set_active(actor, true)
 				actor.attack_clock = 1
 			spawn_clock = 0.4
+	if pending_levels > 0 and not tutorial and state in [State.Soul, State.Body] and upgrade_choices.is_empty():
+		open_levelup()
+		if is_frozen(): return
+	if phase == "combat" and not tutorial and state == State.Soul and not host_available() and (remaining() > 0 or not spawn_queue.is_empty()):
+		no_host_clock += dt
+		if no_host_clock > 2.5:
+			no_host_clock = 0.0
+			var slots := [Vector3(-7, 0.05, -8), Vector3(7, 0.05, -8), Vector3(-7, 0.05, 8), Vector3(7, 0.05, 8)]
+			var best: Vector3 = slots[0]
+			for slot in slots:
+				if (map.center(room_index) + slot).distance_to(player.position) > (map.center(room_index) + best).distance_to(player.position): best = slot
+			world.reinforce(room_index, map.center(room_index) + best)
+			actors = world.room_actors[room_index - 1]
+			reinforcements += 1
+			feedback.emit("reinforce", {})
+	else:
+		no_host_clock = 0.0
 	if tutorial and not actors.is_empty() and actors[0].hp < actors[0].max_hp * 0.5: tutorial_step = 1
 	if tutorial and not actors.is_empty() and not actors[0].alive:
 		tutorial = false
