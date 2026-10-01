@@ -145,6 +145,13 @@ func make_details(index: int) -> Dictionary:
 
 func on_feedback(event: String, data: Dictionary) -> void:
 	if authority.get("fun_mode") == true and event in ["room_clear", "combat_start", "start", "reinforcements"]: return
+	if authority.get("fun_mode") == true and authority.tutorial and event in ["exposed", "inhabit"]: return
+	if authority.get("fun_mode") == true and event == "rejected":
+		toast_requested.emit("빙의 실패 (확률 %d%%) · 적을 더 약하게 만든 뒤 다시 우클릭" % roundi(maxf(0.0, authority.last_try_chance) * 100))
+		return
+	if authority.get("fun_mode") == true and event == "tutorial_done":
+		toast_requested.emit("튜토리얼 완료 · 이제 문을 지나 탐험하세요")
+		return
 	if event in ["hit", "weapon_fire", "shot"] and data.get("hit", event == "hit"):
 		impact_requested.emit()
 	var messages := {"reinforce": "TOAST_REINFORCE", "level_up": "TOAST_LEVELUP", "secret_found": "TOAST_SECRET", "wall_broken": "TOAST_WALL", "blessing": "TOAST_BLESSING", "need_body": "TOAST_NEED_BODY", "sealed": "TOAST_SEALED", "unsealed": "TOAST_UNSEALED", "key_found": "TOAST_KEY", "door_unlocked": "TOAST_DOOR_UNLOCKED", "door_needs_key": "TOAST_NEED_KEY", "purchase": "TOAST_PURCHASE", "too_poor": "TOAST_TOO_POOR", "potion": "TOAST_POTION", "inhabit": "TOAST_INHABIT", "exposed": "TOAST_EXPOSED", "rejected": "TOAST_REJECTED", "unreachable": "TOAST_UNREACHABLE", "soul_focus": "TOAST_FOCUS", "supply": "TOAST_SUPPLY", "room_clear": "TOAST_CLEAR", "reinforcements": "TOAST_WAVE", "loaded": "TOAST_LOADED", "upgrade_chosen": "TOAST_UPGRADE", "milestone": "TOAST_MILESTONE", "element_notice": "TOAST_ELEMENT", "detection": "TOAST_DETECTION", "start": "TOAST_START", "combat_start": "TOAST_COMBAT", "level_ready": "TOAST_LEVEL", "boss_warning": "TOAST_BOSS"}
@@ -188,6 +195,7 @@ func fun_snapshot(state: Dictionary) -> void:
 	state.relic_count = a.relics.size()
 	state.no_host = a.phase == "combat" and a.state == a.State.Soul and not a.tutorial and not a.host_available()
 	state.levelup = a.levelup_offer
+	state.coach = a.tutorial_text()
 	state.level = a.level
 	var hint: String = a.context_hint()
 	if hint != "" and state.interaction == "": state.interaction = hint

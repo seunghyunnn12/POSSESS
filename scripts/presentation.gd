@@ -252,7 +252,8 @@ func _process(dt: float) -> void:
 			if actor.frost_left > 0: actor.label.text += " · " + tr("TARGET_STATUS_ICE")
 		actor.label.font_size = 30 if actor.profile.special else 42
 		actor.label.no_depth_test = is_body and authority.body_profile.get("id", "") == "seer" and actor.position.distance_to(authority.player.position) < 12.0
-		actor.label.visible = authority.running and not authority.is_frozen() and (aimed == actor or actor.label.no_depth_test)
+		var near: bool = authority.get("fun_mode") == true and actor.position.distance_to(authority.player.position) < 14.0
+		actor.label.visible = authority.running and not authority.is_frozen() and (aimed == actor or actor.label.no_depth_test or near)
 		var ready_color: Color = actor.profile.color if actor.profile.special else (Color("84ffd4") if probability > 0.5 else Color("e4e6dd"))
 		actor.label.modulate = Color("ff9c68") if actor.windup > 0.0 else ready_color
 		actor.visual.scale = Vector3.ONE * (1.045 if actor.flash > 0.0 else 1.0)

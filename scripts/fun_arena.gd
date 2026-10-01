@@ -335,7 +335,7 @@ func plan(room: int) -> void:
 			var at := center + Vector3([-2, 5, -5, 2, 0][i], 0.05, [3, -5, -6, -8, -2][i])
 			var role: String = roles[i]
 			list.append(func(): make_host(room, role, at, 2.5 + i * 0.3, trait_id, kind == "trial"))
-		var fodder := 18 if kind == "boss" else (26 if kind == "trial" else 30 + (zone - 1) * 4)
+		var fodder: int = (12 if kind == "boss" else 20) if kind in ["boss", "trial"] else [14, 22, 30][zone - 1]
 		for i in fodder:
 			list.append(func(): make_fodder(room, i))
 		if kind == "boss":
@@ -419,9 +419,9 @@ func make_boss(room: int) -> void:
 	set_active(boss, false)
 
 ## A fresh borrowable body walks in when a fight has none left.
-func reinforce(room: int, at: Vector3) -> Node:
+func reinforce(room: int, at: Vector3, role: String = "") -> Node:
 	var roles := ["soldier", "shotgun", "brute", "mage", "archer", "storm"]
-	spawn(roles[rolls.randi_range(0, roles.size() - 1)], at, 2.5, "common")
+	spawn(role if role != "" else roles[rolls.randi_range(0, roles.size() - 1)], at, 2.5, "common")
 	var actor = enemies[-1]
 	actor.set_meta("room", room)
 	actor.set_meta("reinforcement", true)

@@ -110,7 +110,7 @@ func run() -> void:
 	var before: float = dummy.hp
 	sim.attack()
 	check(dummy.hp == before and sim.projectiles.size() == 1, "default ghost emits a traveling shot rather than instant damage")
-	check(sim.projectiles[0].velocity.length() == 6 and sim.projectiles[0].radius == 0.3, "default shot is slow and has a real wide collision radius")
+	check(is_equal_approx(sim.projectiles[0].velocity.length(), 17.0) and sim.projectiles[0].radius == 0.3, "default shot travels fast enough to hit moving enemies and has a wide collision radius")
 	await ticks(12)
 	check(dummy.hp == before, "distant enemy is not hit before slow projectile arrives")
 	sim.shot_left = 0

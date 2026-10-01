@@ -30,6 +30,9 @@ var used_altars := {}
 var rewards_left := {}
 var secrets_opened := 0
 var levelup_offer := false
+var tutor = null
+var last_try_chance := -1.0
+const PROGRESS_PATH := "user://tutorial.cfg"
 var no_host_clock := 0.0
 var reinforcements := 0
 var key_warn_clock := 0.0
@@ -57,18 +60,68 @@ func _ready() -> void:
 
 func start() -> void:
 	if running or not is_multiplayer_authority(): return
-	tutorial = not learned and not get_tree().has_meta("fun_tutorial_seen")
-	get_tree().set_meta("fun_tutorial_seen", true)
-	learned = true
+	tutorial = not learned and not tutorial_finished()
 	super.start()
 	enter_room(1)
+	if tutorial: begin_tutorial()
+
+static func tutorial_finished() -> bool:
+	var cfg := ConfigFile.new()
+	return cfg.load(PROGRESS_PATH) == OK and cfg.get_value("tutorial", "done", false)
+
+func save_tutorial_done() -> void:
+	learned = true
+	# Test runs never touch the player's real progress file.
+	if "--script" in OS.get_cmdline_args() or "-s" in OS.get_cmdline_args(): return
+	var cfg := ConfigFile.new()
+	cfg.set_value("tutorial", "done", true)
+	cfg.save(PROGRESS_PATH)
+
+## Forced tutorial inside the sealed start room: shoot, possess, use the body, eject.
+func begin_tutorial() -> void:
+	tutorial = true
+	tutorial_step = 0
+	# A rifle body: hold-to-fire is the easiest weapon to learn on.
+	tutor = world.reinforce(1, map.center(1) + Vector3(0, 0.05, -4), "soldier")
+	tutor.set_meta("tutor", true)
+	tutor.rotation.y = 0.0
+	tutor.rewarded = true
+	actors = world.room_actors[0]
+	phase = "combat"
+	for e in map.links.size():
+		if 1 in map.links[e]: world.seal(e, true)
+	feedback.emit("sealed", {"room": 1})
+
+func end_tutorial(completed: bool) -> void:
+	tutorial = false
+	tutorial_step = 0
+	if is_instance_valid(tutor) and not tutor.claimed:
+		tutor.alive = false
+		tutor.hide()
+		tutor.collision_layer = 0
+	phase = "rest"
+	refresh_gates()
+	if completed:
+		save_tutorial_done()
+		feedback.emit("tutorial_done", {})
 
 func skip_training() -> void:
 	if not is_multiplayer_authority() or is_frozen() or outcome != "": return
-	learned = true
-	tutorial = false
-	if not running: start()
-	activate_hosts()
+	if not running:
+		learned = true
+		start()
+		return
+	if tutorial: end_tutorial(false)
+
+## The coach line shown in the middle of the screen during the tutorial.
+func tutorial_text() -> String:
+	if not tutorial: return ""
+	match tutorial_step:
+		0: return "좌클릭으로 앞의 해골을 쏘세요\n체력이 줄수록 빙의 확률이 올라갑니다"
+		1: return "빙의 확률 100%!\n가까이 다가가 해골을 조준하고 우클릭하세요"
+		2: return "빙의 성공! 이제 이 몸이 당신입니다\n좌클릭으로 이 몸의 무기를 쏴보세요"
+		3: return "빌린 몸은 계속 썩습니다 (왼쪽 아래 수명)\n썩기 전에 다른 적으로 갈아타세요 · 지금은 E로 몸에서 나와보세요"
+	return ""
 
 func enter_room(index: int) -> void:
 	if not is_multiplayer_authority() or index < 1 or index > room_total: return
@@ -118,6 +171,7 @@ func remaining() -> int:
 	return count
 
 func timers_safe() -> bool:
+	if tutorial: return true
 	return state == State.Soul and (phase != "combat" or not host_available())
 
 ## Is there a body in this fight the ghost could borrow right now?
@@ -153,6 +207,7 @@ func resolve_flow() -> void:
 	if clear_pending and state in [State.Soul, State.Body]: finish("CLEAR")
 
 func check_clear() -> void:
+	if tutorial: return
 	if phase == "combat" and spawn_queue.is_empty() and remaining() == 0:
 		clear_pending = true
 		collect_fragments(true)
@@ -270,6 +325,7 @@ func current_stats() -> Dictionary:
 
 func capture_chance(actor) -> float:
 	if actor.has_meta("price"): return 1.0
+	if actor.has_meta("tutor") and actor.hp <= actor.max_hp * 0.5: return 1.0
 	return 0.0 if actor.has_meta("fodder") else super.capture_chance(actor)
 
 func begin_possession(candidate) -> void:
@@ -281,6 +337,7 @@ func attempt_possession() -> void:
 	if is_instance_valid(candidate) and candidate.has_meta("fodder"):
 		feedback.emit("unreachable", {})
 		return
+	if is_instance_valid(candidate): last_try_chance = capture_chance(candidate)
 	if is_instance_valid(candidate) and candidate.has_meta("price"):
 		if stun_left > 0 or state not in [State.Soul, State.Body]: return
 		if eye().distance_to(candidate.position + Vector3.UP) > 6.0:
@@ -302,12 +359,7 @@ func finish_possession() -> void:
 	settle_left = 0
 	last_body = body_kind
 	broken_by = ""
-	if tutorial:
-		tutorial_step = 2
-		tutorial = false
-		learned = true
-		activate_hosts()
-		spawn_clock = 0.5
+	if tutorial: tutorial_step = 2
 
 func hurt(amount: float) -> void:
 	if invulnerable > 0 or state not in [State.Soul, State.Body] or outcome != "": return
@@ -426,11 +478,8 @@ func _physics_process(dt: float) -> void:
 			feedback.emit("reinforce", {})
 	else:
 		no_host_clock = 0.0
-	if tutorial and not actors.is_empty() and actors[0].hp < actors[0].max_hp * 0.5: tutorial_step = 1
-	if tutorial and not actors.is_empty() and not actors[0].alive:
-		tutorial = false
-		learned = true
-		activate_hosts()
+	if tutorial and tutorial_step == 0 and is_instance_valid(tutor) and tutor.hp <= tutor.max_hp * 0.5: tutorial_step = 1
+	if tutorial and tutorial_step >= 2 and state == State.Soul: end_tutorial(true)
 	super._physics_process(dt)
 	key_warn_clock = maxf(0, key_warn_clock - dt)
 	if phase == "rest":
@@ -535,3 +584,12 @@ func award_relic() -> void:
 		return
 	coins += 20
 	announce("유물을 모두 모았습니다 · 대신 뼈 동전 20")
+
+func damage_enemy(actor, amount: float) -> void:
+	if tutorial and actor.has_meta("tutor"):
+		amount = minf(amount, maxf(0.0, actor.hp - actor.max_hp * 0.15))
+	super.damage_enemy(actor, amount)
+
+func attack() -> void:
+	super.attack()
+	if tutorial and tutorial_step == 2 and state == State.Body and shot_left > 0: tutorial_step = 3

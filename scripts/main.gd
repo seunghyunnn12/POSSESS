@@ -73,7 +73,7 @@ func _ready() -> void:
 	if fun_run:
 		authority.world = arena
 		arena.source = authority
-		if not records.entries.is_empty(): authority.learned = true
+		# The start-room tutorial is forced until it has been finished once (Tab skips it).
 	if authority is Action: authority.select_ghost(ghost_progress.selected, ghost_progress.unlocked)
 	authority.yaw = aim.x
 	authority.pitch = aim.y

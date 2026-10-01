@@ -9,6 +9,7 @@ var source := ""
 var map_labels: Array[Label] = []
 var map_positions: Array[Vector2] = []
 var hint: Label
+var coach: Label
 var status: Label
 var bindings
 var map
@@ -24,6 +25,17 @@ func _ready() -> void:
 	hint.position = Vector2(32, 432)
 	hint.add_theme_font_size_override("font_size", 20)
 	add_child(hint)
+	coach = Label.new()
+	coach.position = Vector2(140, 440)
+	coach.size = Vector2(1000, 90)
+	coach.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	coach.add_theme_font_size_override("font_size", 27)
+	coach.add_theme_color_override("font_color", Color("ece3cf"))
+	coach.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	coach.add_theme_constant_override("shadow_outline_size", 8)
+	var serif = load("res://assets/fonts/GowunBatang-Bold.ttf")
+	if serif != null: coach.add_theme_font_override("font", serif)
+	add_child(coach)
 	status = Label.new()
 	status.position = Vector2(140, 526)
 	status.add_theme_font_size_override("font_size", 18)
@@ -75,8 +87,9 @@ func present(state: Dictionary) -> void:
 		map_labels[i].text = ("● " if state.room == room else "") + caption
 		map_labels[i].modulate = Color("76e6cd") if state.room == room else TINT.get(kind, Color("9aaeb8"))
 	hint.text = ""
+	coach.text = state.get("coach", "")
 	if state.tutorial:
-		hint.text = "[Tab] 건너뛰기\n" + ("WASD 이동 · 마우스로 둘러보고 문을 고르세요" if state.hub else ("W/A/S/D 이동 · 좌클릭으로 적을 쏴서 약하게 만드세요" if state.tutorial_step == 0 else "빙의 확률이 올랐습니다 · 가까이 가서 우클릭으로 몸을 빼앗으세요"))
+		hint.text = "[Tab] 튜토리얼 건너뛰기"
 	elif state.get("no_host", false):
 		hint.text = "빌릴 몸이 없어 유령의 시간이 멈췄습니다 · 곧 새 몸이 걸어 들어옵니다"
 	elif state.hub:
