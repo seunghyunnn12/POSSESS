@@ -117,10 +117,11 @@ func make_details(index: int) -> Dictionary:
 	var a = authority
 	var stats: Dictionary = a.current_stats()
 	var profile: Dictionary = a.body_profile
-	var values := [tr("NUM") % stats.damage, tr("LIFE_VALUE") % [a.decay if not profile.is_empty() else a.soul, a.decay_max if not profile.is_empty() else 20], tr("NUM") % (1 / stats.interval), tr("PERCENT") % ((1 - stats.damage_taken) * 100), tr("SPEED") % stats.move, tr("NUM") % stats.host_health, tr("SECONDS") % stats.reload if stats.reload > 0 else tr("NA"), tr("PERCENT") % (profile.get("resistance", 0) * 100)]
+	var values := [tr("NUM") % stats.damage, tr("LIFE_VALUE") % [a.decay if not profile.is_empty() else a.soul, a.decay_max if not profile.is_empty() else (a.soul_max() if a.has_method("soul_max") else 20.0)], tr("NUM") % (1 / stats.interval), tr("PERCENT") % ((1 - stats.damage_taken) * 100), tr("SPEED") % stats.move, tr("NUM") % stats.host_health, tr("SECONDS") % stats.reload if stats.reload > 0 else tr("NA"), tr("PERCENT") % (profile.get("resistance", 0) * 100)]
 	var build: Array[String] = []
 	for id in a.upgrades:
-		build.append(tr("AUG_OWNED") % [(preload("res://scripts/fun_augments.gd").DATA[id][0] if a.get("fun_mode") == true else Text.data(Augments.DEFINITIONS[id].name)), a.rank_of(id), (preload("res://scripts/fun_augments.gd").DATA[id][2] if a.get("fun_mode") == true else Text.effect(id, a.rank_of(id)))])
+		if a.rank_of(id) <= 0: continue
+		build.append(tr("AUG_OWNED") % [(preload("res://scripts/fun_augments.gd").DATA[id][0] if a.get("fun_mode") == true else Text.data(Augments.DEFINITIONS[id].name)), a.rank_of(id), (preload("res://scripts/fun_augments.gd").effect(id, a.rank_of(id)) if a.get("fun_mode") == true else Text.effect(id, a.rank_of(id)))])
 	var data := {"detail_name": (Text.data(profile.get("name", "")) + " " + Text.data(Weapons.info(a.body_kind).name)) if not profile.is_empty() else tr("SOUL"),
 		"trait": Text.data(profile.description) if not profile.is_empty() else tr("EMPTY_HOST"), "values": values,
 		"iv": tr("IV") % [(profile.get("attack_iv", 1) - 1) * 100, (profile.get("move_iv", 1) - 1) * 100, (profile.get("vitality_iv", 1) - 1) * 100],
@@ -178,7 +179,8 @@ func fun_snapshot(state: Dictionary) -> void:
 	state.rewards = a.rewards.duplicate()
 	state.enemies = str(a.remaining() + a.spawn_queue.size())
 	state.soul = "영혼 Lv.%d · 피해 +%d%% · %d/%d" % [a.level, a.essence * 3, a.xp, a.xp_next]
-	state.life = "%.1f / %.0f초" % [a.decay if state.body else a.soul, a.decay_max if state.body else 20.0]
+	state.life = "%.1f / %.0f초" % [a.decay if state.body else a.soul, a.decay_max if state.body else a.soul_max()]
+	state.life_fraction = a.decay / maxf(a.decay_max, 0.01) if state.body else a.soul / a.soul_max()
 	if state.body and a.magazine_size() > 0: state.ammo = "%d / %d" % [a.ammo, a.magazine_size()]
 	state.visited = a.visited.duplicate()
 	state.cleared = a.cleared.duplicate()
@@ -209,6 +211,14 @@ func fun_snapshot(state: Dictionary) -> void:
 	if state.modal == "augment":
 		for id in a.upgrade_choices:
 			var item: Array = preload("res://scripts/fun_augments.gd").DATA[id]
-			state.choices.append({"id": id, "name": item[0], "tag": {"gun": "총기", "melee": "근접", "bow": "활", "magic": "마법", "neutral": "유령·생존"}[item[1]], "description": item[4], "effect": preload("res://scripts/fun_augments.gd").effect(id, a.rank_of(id) + 1), "rank": a.rank_of(id) + 1, "combo": "→ " + item[3] + "에 유리"})
+			var build = preload("res://scripts/fun_augments.gd")
+			var card_hint: String = "→ " + item[3] + "에 유리"
+			var evo: String = build.evolution_of(id)
+			if item[1] == "evo":
+				card_hint = "진화 완성 · %s + %s" % [build.DATA[build.EVOLUTIONS[id][0]][0], build.DATA[build.EVOLUTIONS[id][1]][0]]
+			elif evo != "":
+				var partner: String = build.EVOLUTIONS[evo][1] if build.EVOLUTIONS[evo][0] == id else build.EVOLUTIONS[evo][0]
+				card_hint = "진화 재료 · %s (%s와 함께 최대 단계)" % [build.DATA[evo][0], build.DATA[partner][0]]
+			state.choices.append({"id": id, "name": item[0], "tag": build.tag(item[1]), "description": item[4], "effect": build.effect(id, a.rank_of(id) + 1), "rank": a.rank_of(id) + 1, "combo": card_hint})
 			if id == "mag" and state.body and a.magazine_size() > 0:
 				state.choices[-1].effect += " · %d → %d발" % [a.magazine_size(), int(Weapons.info(a.body_kind).magazine * (1 + 0.5 * (a.rank_of(id) + 1)))]

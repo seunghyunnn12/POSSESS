@@ -30,6 +30,11 @@ var used_altars := {}
 var rewards_left := {}
 var secrets_opened := 0
 var levelup_offer := false
+var orbit_angle := 0.0
+var orbit_positions: Array[Vector3] = []
+var orbit_cooldowns := {}
+var lance_clock := 0.0
+var storm_clock := 0.0
 var tutor = null
 var last_try_chance := -1.0
 const PROGRESS_PATH := "user://tutorial.cfg"
@@ -244,6 +249,7 @@ func reward_host(actor, immediate: bool) -> void:
 	if state == State.Body:
 		var recovery := 0.5 * rank_of("harvest")
 		if body_kind == "brute": recovery += 2.0 * rank_of("leech")
+		if rank_of("undying") > 0: recovery *= 2.0
 		decay = minf(decay_max, decay + (0.1 if small else 1.5) + recovery * (0.25 if small else 1.0))
 	if immediate:
 		gain_xp(amount)
@@ -255,9 +261,20 @@ func reward_host(actor, immediate: bool) -> void:
 
 func available_augments() -> Array[String]:
 	var result: Array[String] = []
+	var shooter: bool = ghost_id in ["wanderer", "arcanist"]
 	for id in Build.DATA:
-		if rank_of(id) < 2: result.append(id)
+		if id in Build.PROJECTILE_ONLY and not shooter: continue
+		if Build.DATA[id][1] == "evo":
+			var ready := rank_of(id) == 0
+			for ingredient in Build.EVOLUTIONS[id]:
+				if rank_of(ingredient) < Build.max_rank(ingredient): ready = false
+			if ready: result.append(id)
+		elif rank_of(id) < Build.max_rank(id):
+			result.append(id)
 	return result
+
+func soul_max() -> float:
+	return 20.0 + 5.0 * rank_of("soul_time")
 
 func open_reward() -> void:
 	if not is_multiplayer_authority() or not running or outcome != "" or is_frozen() or phase != "rest" or rewards[room_index - 1]: return
@@ -280,12 +297,21 @@ func open_levelup() -> void:
 	feedback.emit("level_up", {"level": level})
 
 func offer_augments(pool: Array[String]) -> void:
-	var family := Build.family(body_kind if state == State.Body else last_body)
+	# An evolution that just became possible always takes the first card.
+	for id in pool:
+		if Build.DATA[id][1] == "evo":
+			upgrade_choices.append(id)
+			pool.erase(id)
+			break
+	# Then: something for what you are now, something new, something to survive.
+	var now_group: String = Build.family(body_kind) if state == State.Body else "soul"
 	for category in [0, 1, 2]:
+		if upgrade_choices.size() >= 3: break
 		var candidates: Array[String] = []
 		for id in pool:
 			var group: String = Build.DATA[id][1]
-			if (category == 0 and group == family) or (category == 1 and group != family and group != "neutral") or (category == 2 and group == "neutral"):
+			if group == "evo": continue
+			if (category == 0 and group == now_group) or (category == 1 and group != now_group and group != "neutral") or (category == 2 and group == "neutral"):
 				candidates.append(id)
 		if candidates.is_empty(): candidates = pool.duplicate()
 		if candidates.is_empty(): break
@@ -300,7 +326,8 @@ func choose_upgrade(index: int) -> void:
 	var old_max := decay_max
 	var old_mag := magazine_size()
 	var id := upgrade_choices[index]
-	upgrades[id] = 2 if map.kind(room_index) == "treasure" and not levelup_offer else rank_of(id) + 1
+	upgrades[id] = Build.max_rank(id) if map.kind(room_index) == "treasure" and not levelup_offer else mini(Build.max_rank(id), rank_of(id) + 1)
+	if id == "soul_time" and state == State.Soul: soul = minf(soul_max(), soul + 5.0)
 	if levelup_offer:
 		levelup_offer = false
 	elif rewards_left.has(room_index):
@@ -321,6 +348,12 @@ func current_stats() -> Dictionary:
 	if not body_profile.is_empty():
 		stats.life *= 1.8 * ([1.0, 0.7, 0.5][rank_of("glasscannon")])
 	stats.damage *= 1.0 + rank_of("glasscannon") * 0.5
+	if body_profile.is_empty():
+		stats.move *= 1.0 + 0.2 * rank_of("wraith")
+	elif Build.family(body_kind) == "gun":
+		stats.interval *= 1.0 - 0.2 * rank_of("rapid")
+	elif body_kind == "brute":
+		stats.damage_taken *= 1.0 - 0.3 * rank_of("bulwark")
 	return stats
 
 func capture_chance(actor) -> float:
@@ -360,6 +393,9 @@ func finish_possession() -> void:
 	last_body = body_kind
 	broken_by = ""
 	if tutorial: tutorial_step = 2
+	if state == State.Body and rank_of("embalm") > 0:
+		decay_max += 5.0 * rank_of("embalm")
+		decay = decay_max
 
 func hurt(amount: float) -> void:
 	if invulnerable > 0 or state not in [State.Soul, State.Body] or outcome != "": return
@@ -386,8 +422,10 @@ func eject(explode: bool) -> void:
 	var crack := near_crack()
 	# Throwing a body against a cracked wall always detonates it: that is how secrets open.
 	if crack >= 0: explode = true
+	if rank_of("funeral") >= 2: explode = true
 	if explode and decay <= 0 and broken_by.is_empty(): broken_by = "자연 부패로 몸이 무너진"
 	super.eject(explode)
+	soul = soul_max()
 	if explode and crack >= 0:
 		opened_doors[crack] = true
 		world.break_crack(crack)
@@ -478,6 +516,7 @@ func _physics_process(dt: float) -> void:
 			feedback.emit("reinforce", {})
 	else:
 		no_host_clock = 0.0
+	tick_soul_weapons(dt)
 	if tutorial and tutorial_step == 0 and is_instance_valid(tutor) and tutor.hp <= tutor.max_hp * 0.5: tutorial_step = 1
 	if tutorial and tutorial_step >= 2 and state == State.Soul: end_tutorial(true)
 	super._physics_process(dt)
@@ -593,3 +632,91 @@ func damage_enemy(actor, amount: float) -> void:
 func attack() -> void:
 	super.attack()
 	if tutorial and tutorial_step == 2 and state == State.Body and shot_left > 0: tutorial_step = 3
+
+func attack_ghost() -> void:
+	var before := projectiles.size()
+	super.attack_ghost()
+	if projectiles.size() == before: return
+	shot_left *= 1.0 - 0.2 * rank_of("s_rate")
+	var shot: Dictionary = projectiles[-1]
+	shape_soul_shot(shot)
+	var extra := rank_of("s_split")
+	for k in extra:
+		var angle: float = (0.18 if k % 2 == 0 else -0.18) * (k / 2 + 1)
+		launch(shot.at, Basis(Vector3.UP, angle) * shot.velocity, shot.damage, "soul", true, null, shot.radius)
+		shape_soul_shot(projectiles[-1])
+
+func shape_soul_shot(shot: Dictionary) -> void:
+	shot["pierce"] = [0, 1, 3][rank_of("s_pierce")]
+	shot["homing"] = [0.0, 4.0, 9.0][rank_of("s_seek")]
+
+func fire_arrow() -> void:
+	var before := projectiles.size()
+	super.fire_arrow()
+	if projectiles.size() == before or rank_of("volley") == 0: return
+	var arrow: Dictionary = projectiles[-1]
+	for k in rank_of("volley"):
+		var angle: float = 0.12 * (k + 1) * (1 if k % 2 == 0 else -1)
+		launch(arrow.at, Basis(Vector3.UP, angle) * arrow.velocity, arrow.damage * 0.8, "ice", true)
+
+func element_hit(actor, amount: float, element: String) -> void:
+	super.element_hit(actor, amount, element)
+	if element == "fire" and rank_of("wildfire") > 0:
+		var reach := 3.0 if rank_of("wildfire") == 1 else 5.0
+		for other in actors:
+			if other != actor and other.alive and not other.claimed and other.position.distance_to(actor.position) < reach:
+				other.burn_left = maxf(other.burn_left, 2.0)
+
+func nearest_enemy(from: Vector3, reach: float):
+	var best = null
+	var best_d := reach
+	for actor in actors:
+		if not actor.alive or actor.claimed or actor.has_meta("price"): continue
+		var d: float = actor.position.distance_to(from)
+		if d < best_d and ray(from, actor.position + Vector3.UP, 1).is_empty():
+			best = actor
+			best_d = d
+	return best
+
+## Soul weapons and evolutions: they work in any body, only while a fight is on.
+func tick_soul_weapons(dt: float) -> void:
+	orbit_positions.clear()
+	if phase != "combat" or tutorial or state not in [State.Soul, State.Body]: return
+	var crown := rank_of("bone_crown") > 0
+	var skulls := 4 if crown else rank_of("orbit")
+	if skulls > 0:
+		orbit_angle += dt * 2.6
+		for k in skulls:
+			var a: float = orbit_angle + TAU * k / skulls
+			orbit_positions.append(player.position + Vector3(cos(a) * 2.3, 1.1, sin(a) * 2.3))
+		for id in orbit_cooldowns.keys():
+			orbit_cooldowns[id] -= dt
+			if orbit_cooldowns[id] <= 0: orbit_cooldowns.erase(id)
+		for actor in actors:
+			if not actor.alive or actor.claimed or actor.has_meta("price") or orbit_cooldowns.has(actor.get_instance_id()): continue
+			for skull in orbit_positions:
+				if (actor.position + Vector3.UP).distance_to(skull) < 1.1:
+					damage_enemy(actor, 14.0 * (2.0 if crown else 1.0))
+					orbit_cooldowns[actor.get_instance_id()] = 0.6
+					break
+	if rank_of("lance") > 0:
+		lance_clock -= dt
+		if lance_clock <= 0:
+			var target = nearest_enemy(eye(), 16.0)
+			if target != null:
+				var aim_dir: Vector3 = (target.position + Vector3.UP - eye()).normalized()
+				launch(eye(), aim_dir * 30.0, 28.0, "soul", true, null, 0.15)
+				projectiles[-1]["pierce"] = 3
+				feedback.emit("lance", {})
+			lance_clock = 2.4 if rank_of("lance") == 1 else 1.4
+	if rank_of("storm_soul") > 0:
+		storm_clock -= dt
+		if storm_clock <= 0:
+			storm_clock = 2.0
+			for k in 8:
+				var dir := Vector3(cos(TAU * k / 8.0), 0.05, sin(TAU * k / 8.0))
+				launch(player.position + Vector3.UP * 1.1, dir * 12.0, 16.0, "soul", true, null, 0.2)
+				projectiles[-1]["homing"] = 6.0
+				projectiles[-1]["pierce"] = 1
+	if rank_of("undying") > 0 and state == State.Body and not timers_safe():
+		decay = minf(decay_max, decay + dt * 0.5)

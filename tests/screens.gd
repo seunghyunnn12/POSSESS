@@ -6,7 +6,7 @@ var map
 func snap(label: String) -> void:
 	for i in 6: await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://qa-output/v18-" + label + ".png")
+	root.get_texture().get_image().save_png("res://qa-output/v21-" + label + ".png")
 
 func run() -> void:
 	game = Main.new()
@@ -33,6 +33,11 @@ func run() -> void:
 			sim.begin_possession(actor)
 			break
 	await ticks(200)
+	sim.pending_levels = 0
+	while not sim.upgrade_choices.is_empty(): sim.choose_upgrade(0)
+	sim.upgrades["orbit"] = 2
+	sim.upgrades["lance"] = 1
+	await ticks(40)
 	aim_point(map.center(fight) + Vector3(0, 1.4, -6))
 	sim.decay = sim.decay_max * 0.55
 	await snap("hud")
@@ -42,7 +47,13 @@ func run() -> void:
 	sim.check_clear()
 	sim.resolve_flow()
 	await ticks(10)
-	sim.open_reward()
+	sim.upgrades["curse"] = 2
+	sim.phase = "combat"
+	sim.upgrade_choices.clear()
+	sim.pending_levels = 1
+	sim.open_levelup()
+	await ticks(2)
+	game.ui_presenter.refresh()
 	game._sync_mouse()
 	await snap("augment")
 	sim.choose_upgrade(0)

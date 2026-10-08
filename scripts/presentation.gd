@@ -159,6 +159,22 @@ func _process(dt: float) -> void:
 			for mesh in actor_meshes.get(id, []):
 				if is_instance_valid(mesh): mesh.material_overlay = null
 			flash_left.erase(id)
+	var skulls = authority.get("orbit_positions")
+	if skulls != null:
+		while orbit_nodes.size() < skulls.size():
+			var node := Arena.sphere(self, 0.22, Vector3.ZERO, Arena.material(Color("d8f6e8"), 2.2))
+			var head = load("res://assets/env/halloween/skull.gltf")
+			if head != null:
+				var model: Node3D = head.instantiate()
+				model.scale = Vector3.ONE * 0.45
+				model.position = Vector3(0, -0.2, 0)
+				node.add_child(model)
+			orbit_nodes.append(node)
+		for k in orbit_nodes.size():
+			orbit_nodes[k].visible = k < skulls.size()
+			if k < skulls.size():
+				orbit_nodes[k].position = skulls[k]
+				orbit_nodes[k].rotation.y += dt * 4.0
 	if authority.get("projectiles") != null:
 		var ids: Dictionary = {}
 		for p in authority.projectiles:
@@ -461,6 +477,7 @@ func stop_impact(actor) -> void:
 ## First-run shader warm-up: draw every model, effect and projectile once in front
 ## of the camera (behind the title UI) so the GPU compiles them before play.
 var warm_nodes: Array[Node] = []
+var orbit_nodes: Array[Node3D] = []
 
 func warmup() -> void:
 	var ahead: Vector3 = camera.global_position + camera.global_basis * Vector3(0, -0.2, -3.2)

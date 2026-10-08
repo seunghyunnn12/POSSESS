@@ -350,9 +350,30 @@ func tick_projectiles(dt: float) -> void:
 		if i >= projectiles.size():
 			continue
 		var p: Dictionary = projectiles[i]
+		if p.friendly and p.get("homing", 0.0) > 0.0:
+			var target = null
+			var best := 14.0
+			for actor in actors:
+				if actor.alive and not actor.claimed and not actor.has_meta("price") and not p.get("hits", []).has(actor):
+					var d: float = actor.position.distance_to(p.at)
+					if d < best:
+						best = d
+						target = actor
+			if target != null:
+				var want: Vector3 = (target.position + Vector3.UP - p.at).normalized() * p.velocity.length()
+				p.velocity = p.velocity.lerp(want, clampf(p.homing * dt, 0.0, 1.0))
 		var next: Vector3 = p.at + p.velocity * dt
 		var hit := projectile_hit(p, next)
 		p.life -= dt
+		if not hit.is_empty() and p.friendly and hit.collider is Actor and p.get("pierce", 0) > 0:
+			# A piercing shot damages each enemy once and keeps going.
+			if not p.has("hits"): p["hits"] = []
+			if not p.hits.has(hit.collider):
+				p.hits.append(hit.collider)
+				element_hit(hit.collider, p.damage, p.element)
+				p.pierce -= 1
+			p.at = hit.position + p.velocity.normalized() * 0.9
+			continue
 		if not hit.is_empty():
 			projectiles.remove_at(i)
 			if p.friendly and hit.collider is Actor:
