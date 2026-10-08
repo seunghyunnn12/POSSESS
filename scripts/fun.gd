@@ -38,6 +38,8 @@ var storm_clock := 0.0
 var tutor = null
 var last_try_chance := -1.0
 const PROGRESS_PATH := "user://tutorial.cfg"
+## Set by the title's "튜토리얼 다시 하기": run the start-room tutorial even when it was done before.
+var tutorial_requested := false
 var no_host_clock := 0.0
 var reinforcements := 0
 var key_warn_clock := 0.0
@@ -65,7 +67,8 @@ func _ready() -> void:
 
 func start() -> void:
 	if running or not is_multiplayer_authority(): return
-	tutorial = not learned and not tutorial_finished()
+	tutorial = tutorial_requested or (not learned and not tutorial_finished())
+	tutorial_requested = false
 	super.start()
 	enter_room(1)
 	if tutorial: begin_tutorial()
@@ -112,11 +115,20 @@ func end_tutorial(completed: bool) -> void:
 
 func skip_training() -> void:
 	if not is_multiplayer_authority() or is_frozen() or outcome != "": return
+	# Skipping counts as done: the tutorial will not force itself again (the title can replay it).
 	if not running:
-		learned = true
+		save_tutorial_done()
 		start()
 		return
-	if tutorial: end_tutorial(false)
+	if tutorial:
+		save_tutorial_done()
+		end_tutorial(false)
+
+## Title menu: start a run that opens with the tutorial, done before or not.
+func replay_tutorial() -> void:
+	if running or not is_multiplayer_authority(): return
+	tutorial_requested = true
+	start()
 
 ## The coach line shown in the middle of the screen during the tutorial.
 func tutorial_text() -> String:

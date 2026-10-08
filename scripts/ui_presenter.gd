@@ -168,6 +168,7 @@ func on_feedback(event: String, data: Dictionary) -> void:
 func fun_snapshot(state: Dictionary) -> void:
 	var a = authority
 	state.fun = true
+	state.tutorial_done = a.learned or a.tutorial_finished()
 	var map = a.map
 	state.map = map
 	state.zone = map.zone(a.room_index)

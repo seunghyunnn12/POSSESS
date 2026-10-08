@@ -2,6 +2,7 @@ extends Control
 ## Four retained Control scenes. Receives only presenter signals and emits intents.
 signal choice_requested(index: int)
 signal continue_requested
+signal tutorial_requested
 signal key_requested(code: int)
 signal ghost_requested(id: String)
 const Ghosts = preload("res://scripts/ghosts.gd")
@@ -49,7 +50,9 @@ func _ready() -> void:
 	screens.title.get_node("Continue").pressed.connect(func():
 		if model.get("outcome", "") != "": key_requested.emit(KEY_R)
 		else: continue_requested.emit())
-	screens.title.get_node("Skip").pressed.connect(func(): key_requested.emit(KEY_TAB))
+	screens.title.get_node("Skip").pressed.connect(func():
+		if model.get("tutorial_done", false): tutorial_requested.emit()
+		else: key_requested.emit(KEY_TAB))
 	screens.title.get_node("SettingsButton").pressed.connect(func(): selected_tab = "Settings"; key_requested.emit(KEY_ESCAPE); update_tab())
 	screens.title.get_node("RecordsButton").pressed.connect(func(): selected_tab = "Records"; key_requested.emit(KEY_ESCAPE); update_tab())
 	for id in Ghosts.IDS:
@@ -169,7 +172,9 @@ func present(state: Dictionary) -> void:
 	if state.get("fun", false):
 		put("hud", "Host/Caption", "몸 수명 · 자연 부패 중" if state.body else ("유령 · 전투 시간" if state.phase == "combat" else "유령 · 시간 정지"))
 		if modal == "title":
-			put("title", "Footer", "0.21 플레이테스트 · 매 판 새로 만들어지는 3구역")
+			if state.outcome == "" and not state.running:
+				put("title", "Skip", "튜토리얼 다시 하기" if state.get("tutorial_done", false) else "튜토리얼 건너뛰기    Tab")
+			put("title", "Footer", "0.22 플레이테스트 · 매 판 새로 만들어지는 3구역")
 			put("title", "Subtitle", "세 구역을 탐험하고 군주의 무덤으로 향하세요." if state.outcome == "" else ("군주의 무덤을 넘어 원정에서 돌아왔습니다" if state.outcome == "CLEAR" else state.death_reason))
 			put("title", "Description", "좌클릭 공격 · 우클릭 빙의 · E 몸에서 나오기 · Shift 회피\nF 상호작용 · R 재장전 · Esc 일시정지 · 몸이 썩기 전에 갈아타세요" if state.outcome == "" else state.end_stats)
 		if modal == "augment":

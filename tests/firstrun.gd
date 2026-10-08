@@ -116,6 +116,23 @@ func run() -> void:
 	key(KEY_TAB)
 	await process_frame
 	check(not sim.tutorial and not sim.world.is_blocked(first_door()), "Tab skips the tutorial and opens the doors")
+	check(sim.learned, "skipping counts as done, so the tutorial is not forced again")
+
+	# Once done, Start goes straight in and the title offers a separate replay.
+	await boot(37)
+	sim.learned = true
+	game.ui_presenter.refresh()
+	await process_frame
+	var replay: Button = game.hud.screens.title.get_node("Skip")
+	check(replay.visible and replay.text == "튜토리얼 다시 하기", "the title offers 튜토리얼 다시 하기 after it is done (%s)" % replay.text)
+	replay.pressed.emit()
+	await process_frame
+	check(sim.running and sim.tutorial and sim.room_index == 1, "튜토리얼 다시 하기 starts a run with the tutorial")
+	await boot(41)
+	sim.learned = true
+	key(KEY_ENTER)
+	await process_frame
+	check(sim.running and not sim.tutorial, "a player who finished it starts the expedition directly")
 	game.queue_free()
 	await process_frame
 	print("FIRSTRUN: %d checks, %d failures" % [checks, failures])

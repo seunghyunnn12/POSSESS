@@ -93,6 +93,7 @@ func _ready() -> void:
 	hud = ActionHud.new() if authority is Action else Hud.new()
 	hud.choice_requested.connect(_choose_upgrade)
 	hud.continue_requested.connect(_continue)
+	if hud.has_signal("tutorial_requested"): hud.tutorial_requested.connect(_replay_tutorial)
 	hud.key_requested.connect(_ui_key)
 	hud.ghost_requested.connect(_select_ghost)
 	layer.add_child(hud)
@@ -124,6 +125,11 @@ func _ready() -> void:
 	# QA can bypass the title, while normal play always starts deliberately.
 	if "--play" in OS.get_cmdline_user_args():
 		begin()
+
+func _replay_tutorial() -> void:
+	if not fun_run or authority.running: return
+	authority.tutorial_requested = true
+	begin()
 
 func begin() -> void:
 	authority.paused = false
